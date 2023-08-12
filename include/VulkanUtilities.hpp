@@ -8,5 +8,7 @@ namespace Diffuse {
 		static bool CheckValidationLayerSupport();
 		static std::vector<const char*> GetRequiredExtensions(bool enableValidationLayers);
 		static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+			const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 	};
 }

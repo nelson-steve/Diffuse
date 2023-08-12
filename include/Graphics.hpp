@@ -14,5 +14,6 @@ namespace Diffuse {
 	private:
 		GLFWwindow* m_window;
 		VkInstance m_instance;
+		VkDebugUtilsMessengerEXT m_debug_messenger;
 	};
 }

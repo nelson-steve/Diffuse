@@ -39,10 +39,22 @@ namespace Diffuse {
 		}
 		
 		if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS) {
-			std::cout<<"Failed to create instance!";
+			std::cout<<"Failed to create Vulkan instance!";
 			return false;
 		}
+		
+		//		--Setup Debug Messenger--
+		if (config.enable_validation_layers) {
+			VkDebugUtilsMessengerCreateInfoEXT createInfo;
+			vkUtilities::PopulateDebugMessengerCreateInfo(createInfo);
 
+			if (vkUtilities::CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debug_messenger) != VK_SUCCESS) {
+				std::cout<<"Failed to set up debug messenger";
+				return false;
+			}
+		}
+
+		// SUCCESS
 		return true;
 	}
 }
