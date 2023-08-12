@@ -1,16 +1,9 @@
-#include "Application.h"
-
-#include <iostream>
-#include <vulkan/vulkan.h>
+#include "Application.hpp"
 
 int main(int argc, char** argv[]) {
-    std::cout<<"Hello world";
-    
-    VkInstance instance;
-    vkCreateInstance(nullptr, nullptr, nullptr);
-
-    Application* app = new Application();
+    Diffuse::Application* app = new Diffuse::Application();
     app->Init();
+    //app->Update();
     delete app;
 
     return 0;

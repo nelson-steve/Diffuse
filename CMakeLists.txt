@@ -5,25 +5,35 @@ project(Diffuse)
 set (CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
-    Application/Application.cpp
-    main.cpp
+    src/Application/Application.cpp
+    src/Graphics/Graphics.cpp
+    src/Graphics/VulkanUtilities.cpp
+    src/main.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+set(HEADERS
+    include/Application.hpp
+    include/Graphics.hpp
+    include/VulkanUtilities.hpp
+)
+
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC 
         ${PROJECT_SOURCE_DIR}/include
 )
 
-
-# add_subdirectory(deps/glfw-3.3.6)
-
 find_package(Vulkan REQUIRED)
+find_package(OpenGL REQUIRED)
+# find_package(glfw3 REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/include, ${Vulkan_INCLUDE_DIRS})
-
-target_link_libraries(${PROJECT_NAME} ${GLFW_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
+include_directories(${OPENGL_INCLUDE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}/dependencies/include, ${PROJECT_SOURCE_DIR}/dependencies/include)
 
 message(${PROJECT_SOURCE_DIR})
+message(${Vulkan_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/dependencies/lib/glfw3.lib)
+target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
