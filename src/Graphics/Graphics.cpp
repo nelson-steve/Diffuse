@@ -54,6 +54,30 @@ namespace Diffuse {
 			}
 		}
 
+		//		--Pick Physical Device--
+		uint32_t deviceCount = 0;
+		vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+
+		if (deviceCount == 0) {
+			std::cout << "failed to find GPUs with Vulkan support!";
+			return false;
+		}
+
+		std::vector<VkPhysicalDevice> devices(deviceCount);
+		vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
+
+		for (const auto& device : devices) {
+			if (vkUtilities::IsDeviceSuitable(device, m_surface,config.device_extensions)) {
+				m_physical_device = device;
+				break;
+			}
+		}
+
+		if (m_physical_device == VK_NULL_HANDLE) {
+			std::cout << "failed to find a suitable GPU!";
+			return false;
+		}
+
 		// SUCCESS
 		return true;
 	}

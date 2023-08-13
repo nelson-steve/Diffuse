@@ -6,6 +6,9 @@ namespace Diffuse {
 		const std::vector<const char*> validation_layers = {
 			"VK_LAYER_KHRONOS_validation"
 		};
+		const std::vector<const char*> device_extensions = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
 	};
 	class Graphics {
 	public:
@@ -14,6 +17,8 @@ namespace Diffuse {
 	private:
 		GLFWwindow* m_window;
 		VkInstance m_instance;
+		VkSurfaceKHR m_surface;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
+		VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 	};
 }
