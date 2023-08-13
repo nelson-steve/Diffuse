@@ -10,7 +10,7 @@ namespace Diffuse {
 			std::cout << "SUCCESS";
 		}
 		else {
-			std::cout << "Couldn't create Vulkan Instance";
+			std::cout << "Failure setting up Vulkan";
 		}
 	}
 }

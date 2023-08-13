@@ -18,6 +18,13 @@ namespace Diffuse {
 		GLFWwindow* m_window;
 		VkInstance m_instance;
 		VkSurfaceKHR m_surface;
+		VkDevice m_device;
+		VkSwapchainKHR m_swap_chain;
+		std::vector<VkImage> m_swap_chain_images;
+		VkFormat m_swap_chain_image_format;
+		VkExtent2D m_swap_chain_extent;
+		VkQueue m_graphics_queue;
+		VkQueue m_present_queue;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
 		VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 
