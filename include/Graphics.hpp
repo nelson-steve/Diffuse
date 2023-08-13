@@ -20,5 +20,8 @@ namespace Diffuse {
 		VkSurfaceKHR m_surface;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
 		VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
+
+		int m_width = 1200;
+		int m_height = 720;
 	};
 }

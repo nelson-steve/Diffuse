@@ -3,6 +3,15 @@
 
 namespace Diffuse {
 	bool Graphics::Init(const Config& config) {
+		if (glfwInit() != GLFW_TRUE)
+		{
+			std::cout << "Failed to intitialize GLFW";
+			return false;
+		}
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+		m_window = glfwCreateWindow(m_width, m_height, "Diffuse", nullptr, nullptr);
+
 		//		---Create Vulkan Instancee---
 		if (config.enable_validation_layers && !vkUtilities::CheckValidationLayerSupport()) {
 			std::cout << "validation layers requested, but not available!";
@@ -52,6 +61,11 @@ namespace Diffuse {
 				std::cout<<"Failed to set up debug messenger";
 				return false;
 			}
+		}
+		//		--Create Surface--
+		if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
+			std::cout<<"failed to create window surface!";
+			return false;
 		}
 
 		//		--Pick Physical Device--
