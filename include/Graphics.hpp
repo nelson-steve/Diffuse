@@ -22,6 +22,7 @@ namespace Diffuse {
 		VkSwapchainKHR m_swap_chain;
 		std::vector<VkImage> m_swap_chain_images;
 		VkFormat m_swap_chain_image_format;
+		std::vector<VkImageView> m_swap_chain_image_views;
 		VkExtent2D m_swap_chain_extent;
 		VkQueue m_graphics_queue;
 		VkQueue m_present_queue;
