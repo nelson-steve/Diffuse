@@ -24,7 +24,9 @@ namespace Diffuse {
 		VkRenderPass m_render_pass;
 		VkSwapchainKHR m_swap_chain;
 		VkExtent2D m_swap_chain_extent;
+		VkPipeline m_graphics_pipeline;
 		VkFormat m_swap_chain_image_format;
+		VkPipelineLayout m_pipeline_layout;
 		std::vector<VkImage> m_swap_chain_images;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
 		std::vector<VkImageView> m_swap_chain_image_views;

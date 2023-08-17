@@ -17,7 +17,6 @@ namespace Diffuse {
 		std::vector<VkSurfaceFormatKHR> formats;
 		std::vector<VkPresentModeKHR> presentModes;
 	};
-
 	class vkUtilities {
 	public:
 		static bool CheckValidationLayerSupport();
@@ -32,5 +31,6 @@ namespace Diffuse {
 		static VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		static VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 		static VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* m_window);
+		static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
 	};
 }

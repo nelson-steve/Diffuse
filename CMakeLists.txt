@@ -8,6 +8,7 @@ set(SOURCES
     src/Application/Application.cpp
     src/Graphics/Graphics.cpp
     src/Graphics/VulkanUtilities.cpp
+    src/Utils/ReadFile.cpp
     src/main.cpp
 )
 
@@ -15,6 +16,7 @@ set(HEADERS
     include/Application.hpp
     include/Graphics.hpp
     include/VulkanUtilities.hpp
+    include/ReadFile.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
