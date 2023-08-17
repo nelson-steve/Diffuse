@@ -30,6 +30,7 @@ namespace Diffuse {
 		std::vector<VkImage> m_swap_chain_images;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
 		std::vector<VkImageView> m_swap_chain_image_views;
+		std::vector<VkFramebuffer> m_swap_chain_framebuffers; 
 		VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 
 		int m_width = 1200;

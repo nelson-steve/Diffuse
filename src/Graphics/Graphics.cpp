@@ -360,6 +360,29 @@ namespace Diffuse {
 		vkDestroyShaderModule(m_device, fragShaderModule, nullptr);
 		vkDestroyShaderModule(m_device, vertShaderModule, nullptr);
 
+		// Create Framebuffers
+		m_swap_chain_framebuffers.resize(m_swap_chain_image_views.size());
+
+		for (size_t i = 0; i < m_swap_chain_image_views.size(); i++) {
+			VkImageView attachments[] = {
+				m_swap_chain_image_views[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = m_render_pass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = m_swap_chain_extent.width;
+			framebufferInfo.height = m_swap_chain_extent.height;
+			framebufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
+				std::cout<<"failed to create framebuffer!";
+				return false;
+			}
+		}
+
 		// SUCCESS
 		return true;
 	}
