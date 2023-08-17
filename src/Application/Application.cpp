@@ -20,4 +20,9 @@ namespace Diffuse {
 			m_graphics->Draw();
 		}
 	}
+	void Application::Destroy()
+	{
+		m_graphics->CleanUp(m_config);
+		delete m_graphics;
+	}
 }

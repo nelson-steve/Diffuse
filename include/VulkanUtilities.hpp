@@ -34,5 +34,6 @@ namespace Diffuse {
 		static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
 		static void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
 			std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline);
+		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 	};
 }

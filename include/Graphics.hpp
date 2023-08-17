@@ -14,6 +14,7 @@ namespace Diffuse {
 	public:
 		bool Init(const Config& config);
 		void Draw();
+		void CleanUp(const Config& config);
 		GLFWwindow* GetWindow() const { return m_window; }
 	private:
 		VkDevice m_device;

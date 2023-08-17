@@ -473,4 +473,24 @@ namespace Diffuse {
 
 		vkQueuePresentKHR(m_present_queue, &presentInfo);
 	}
+	void Graphics::CleanUp(const Config& config)
+	{
+		for (auto framebuffer : m_swap_chain_framebuffers) {
+			vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+		}
+		vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
+		vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+		vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+		for (auto imageView : m_swap_chain_image_views)
+			vkDestroyImageView(m_device, imageView, nullptr);
+		vkDestroySwapchainKHR(m_device, m_swap_chain, nullptr);
+		vkDestroyDevice(m_device, nullptr);
+		if (config.enable_validation_layers)
+			vkUtilities::DestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
+		vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+		vkDestroyInstance(m_instance, nullptr);
+
+		glfwDestroyWindow(m_window);
+		glfwTerminate();
+	}
 }
