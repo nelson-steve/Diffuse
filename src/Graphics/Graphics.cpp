@@ -185,7 +185,8 @@ namespace Diffuse {
 		swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
 		if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create swap chain!");
+			std::cout << "failed to create swap chain!";
+			return false;
 		}
 
 		vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, nullptr);
@@ -215,7 +216,7 @@ namespace Diffuse {
 			createInfo.subresourceRange.layerCount = 1;
 
 			if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
-				std::cout<<"failed to create image views!";
+				std::cout << "failed to create image views!";
 				return false;
 			}
 		}
@@ -248,7 +249,7 @@ namespace Diffuse {
 		renderPassInfo.pSubpasses = &subpass;
 
 		if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_render_pass) != VK_SUCCESS) {
-			std::cout<<"failed to create render pass!";
+			std::cout << "failed to create render pass!";
 			return false;
 		}
 
@@ -333,7 +334,8 @@ namespace Diffuse {
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 
 		if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create pipeline layout!");
+			std::cout << "failed to create pipeline layout!";
+			return false;
 		}
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -353,7 +355,7 @@ namespace Diffuse {
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 		if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphics_pipeline) != VK_SUCCESS) {
-			std::cout<<"failed to create graphics pipeline!";
+			std::cout << "failed to create graphics pipeline!";
 			return false;
 		}
 
@@ -378,12 +380,12 @@ namespace Diffuse {
 			framebufferInfo.layers = 1;
 
 			if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
-				std::cout<<"failed to create framebuffer!";
+				std::cout << "failed to create framebuffer!";
 				return false;
 			}
 		}
 
-		// Create command pool
+		// Create Command Pool
 		//QueueFamilyIndices queueFamilyIndices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
 
 		VkCommandPoolCreateInfo poolInfo{};
@@ -393,6 +395,18 @@ namespace Diffuse {
 
 		if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_command_pool) != VK_SUCCESS) {
 			std::cout << "failed to create command pool!";
+			return false;
+		}
+
+		// Create Command Buffer
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = m_command_pool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(m_device, &allocInfo, &m_command_buffer) != VK_SUCCESS) {
+			std::cout << "failed to allocate command buffers!";
 			return false;
 		}
 

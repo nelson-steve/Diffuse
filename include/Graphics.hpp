@@ -26,6 +26,7 @@ namespace Diffuse {
 		VkCommandPool m_command_pool;
 		VkExtent2D m_swap_chain_extent;
 		VkPipeline m_graphics_pipeline;
+		VkCommandBuffer m_command_buffer;
 		VkFormat m_swap_chain_image_format;
 		VkPipelineLayout m_pipeline_layout;
 		std::vector<VkImage> m_swap_chain_images;
