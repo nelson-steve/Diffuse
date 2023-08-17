@@ -23,6 +23,7 @@ namespace Diffuse {
 		VkQueue m_graphics_queue;
 		VkRenderPass m_render_pass;
 		VkSwapchainKHR m_swap_chain;
+		VkCommandPool m_command_pool;
 		VkExtent2D m_swap_chain_extent;
 		VkPipeline m_graphics_pipeline;
 		VkFormat m_swap_chain_image_format;
