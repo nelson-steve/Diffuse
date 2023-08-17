@@ -23,24 +23,27 @@ namespace Diffuse {
 		VkSurfaceKHR m_surface;
 		VkQueue m_present_queue;
 		VkQueue m_graphics_queue;
-		VkFence m_in_flight_fence;
 		VkRenderPass m_render_pass;
 		VkSwapchainKHR m_swap_chain;
 		VkCommandPool m_command_pool;
 		VkExtent2D m_swap_chain_extent;
 		VkPipeline m_graphics_pipeline;
-		VkCommandBuffer m_command_buffer;
 		VkPhysicalDevice m_physical_device;
 		VkFormat m_swap_chain_image_format;
 		VkPipelineLayout m_pipeline_layout;
-		VkSemaphore m_image_available_semaphore;
-		VkSemaphore m_render_finished_semaphore;
+		std::vector<VkFence> m_in_flight_fences;
 		std::vector<VkImage> m_swap_chain_images;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
+		std::vector<VkCommandBuffer> m_command_buffers;
 		std::vector<VkImageView> m_swap_chain_image_views;
 		std::vector<VkFramebuffer> m_swap_chain_framebuffers; 
+		std::vector<VkSemaphore> m_render_finished_semaphores;
+		std::vector<VkSemaphore> m_image_available_semaphores;
 
 		int m_width = 1200;
 		int m_height = 720;
+
+		int m_current_frame = 0;
+		const int MAX_FRAMES_IN_FLIGHT = 2;
 	};
 }

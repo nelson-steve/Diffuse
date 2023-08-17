@@ -398,19 +398,24 @@ namespace Diffuse {
 			return false;
 		}
 
-		// Create Command Buffer
+		// Create Command Buffers
+		m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
 		VkCommandBufferAllocateInfo alloc_info{};
 		alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		alloc_info.commandPool = m_command_pool;
 		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		alloc_info.commandBufferCount = 1;
+		alloc_info.commandBufferCount = (uint32_t)m_command_buffers.size();
 
-		if (vkAllocateCommandBuffers(m_device, &alloc_info, &m_command_buffer) != VK_SUCCESS) {
+		if (vkAllocateCommandBuffers(m_device, &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
 			std::cout << "failed to allocate command buffers!";
 			return false;
 		}
 
 		// Create Sync Obects
+		m_image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_in_flight_fences.resize(MAX_FRAMES_IN_FLIGHT);
+		
 		VkSemaphoreCreateInfo semaphore_info{};
 		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -418,11 +423,13 @@ namespace Diffuse {
 		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphore) != VK_SUCCESS ||
-			vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphore) != VK_SUCCESS ||
-			vkCreateFence(m_device, &fence_info, nullptr, &m_in_flight_fence) != VK_SUCCESS) {
-			std::cout << "failed to create synchronization objects for a frame!";
-			return false;
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphores[i]) != VK_SUCCESS ||
+				vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphores[i]) != VK_SUCCESS ||
+				vkCreateFence(m_device, &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS) {
+				std::cout << "failed to create synchronization objects for a frame!";
+				return false;
+			}
 		}
 
 		// SUCCESS
@@ -430,33 +437,35 @@ namespace Diffuse {
 	}
 	void Graphics::Draw()
 	{
-		vkWaitForFences(m_device, 1, &m_in_flight_fence, VK_TRUE, UINT64_MAX);
-		vkResetFences(m_device, 1, &m_in_flight_fence);
+		vkWaitForFences(m_device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
+		vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_image_available_semaphore, VK_NULL_HANDLE, &imageIndex);
+		vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &imageIndex);
 
-		vkResetCommandBuffer(m_command_buffer, /*VkCommandBufferResetFlagBits*/ 0);
-		vkUtilities::RecordCommandBuffer(m_command_buffer, imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline);
+		vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
+		vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline);
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		VkSemaphore waitSemaphores[] = { m_image_available_semaphore };
+		VkSemaphore waitSemaphores[] = { m_image_available_semaphores[m_current_frame] };
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_command_buffer;
+		submitInfo.pCommandBuffers = &m_command_buffers[m_current_frame];
 
-		VkSemaphore signalSemaphores[] = { m_render_finished_semaphore };
+		VkSemaphore signalSemaphores[] = { m_render_finished_semaphores[m_current_frame] };
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		if (vkQueueSubmit(m_graphics_queue, 1, &submitInfo, m_in_flight_fence) != VK_SUCCESS) {
-			throw std::runtime_error("failed to submit draw command buffer!");
+		if (vkQueueSubmit(m_graphics_queue, 1, &submitInfo, m_in_flight_fences[m_current_frame]) != VK_SUCCESS) {
+			std::cout << "failed to submit draw command buffer!";
+			// TODO better error handling
+			return;
 		}
 
 		VkPresentInfoKHR presentInfo{};
@@ -472,6 +481,8 @@ namespace Diffuse {
 		presentInfo.pImageIndices = &imageIndex;
 
 		vkQueuePresentKHR(m_present_queue, &presentInfo);
+
+		m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 	}
 	void Graphics::CleanUp(const Config& config)
 	{
