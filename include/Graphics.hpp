@@ -15,18 +15,19 @@ namespace Diffuse {
 		bool Init(const Config& config);
 		void Draw();
 	private:
+		VkDevice m_device;
 		GLFWwindow* m_window;
 		VkInstance m_instance;
 		VkSurfaceKHR m_surface;
-		VkDevice m_device;
-		VkSwapchainKHR m_swap_chain;
-		std::vector<VkImage> m_swap_chain_images;
-		VkFormat m_swap_chain_image_format;
-		std::vector<VkImageView> m_swap_chain_image_views;
-		VkExtent2D m_swap_chain_extent;
-		VkQueue m_graphics_queue;
 		VkQueue m_present_queue;
+		VkQueue m_graphics_queue;
+		VkRenderPass m_render_pass;
+		VkSwapchainKHR m_swap_chain;
+		VkExtent2D m_swap_chain_extent;
+		VkFormat m_swap_chain_image_format;
+		std::vector<VkImage> m_swap_chain_images;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
+		std::vector<VkImageView> m_swap_chain_image_views;
 		VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 
 		int m_width = 1200;
