@@ -428,4 +428,49 @@ namespace Diffuse {
 		// SUCCESS
 		return true;
 	}
+	void Graphics::Draw()
+	{
+		vkWaitForFences(m_device, 1, &m_in_flight_fence, VK_TRUE, UINT64_MAX);
+		vkResetFences(m_device, 1, &m_in_flight_fence);
+
+		uint32_t imageIndex;
+		vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_image_available_semaphore, VK_NULL_HANDLE, &imageIndex);
+
+		vkResetCommandBuffer(m_command_buffer, /*VkCommandBufferResetFlagBits*/ 0);
+		vkUtilities::RecordCommandBuffer(m_command_buffer, imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { m_image_available_semaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_command_buffer;
+
+		VkSemaphore signalSemaphores[] = { m_render_finished_semaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		if (vkQueueSubmit(m_graphics_queue, 1, &submitInfo, m_in_flight_fence) != VK_SUCCESS) {
+			throw std::runtime_error("failed to submit draw command buffer!");
+		}
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+
+		VkSwapchainKHR swapChains[] = { m_swap_chain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+
+		presentInfo.pImageIndices = &imageIndex;
+
+		vkQueuePresentKHR(m_present_queue, &presentInfo);
+	}
 }

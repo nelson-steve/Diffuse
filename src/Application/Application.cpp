@@ -13,4 +13,11 @@ namespace Diffuse {
 			std::cout << "Failure setting up Vulkan";
 		}
 	}
+	void Application::Update()
+	{
+		while (!glfwWindowShouldClose(m_graphics->GetWindow())) {
+			glfwPollEvents();
+			m_graphics->Draw();
+		}
+	}
 }

@@ -32,5 +32,7 @@ namespace Diffuse {
 		static VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 		static VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* m_window);
 		static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
+		static void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
+			std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline);
 	};
 }
