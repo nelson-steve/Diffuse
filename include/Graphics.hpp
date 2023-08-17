@@ -20,6 +20,7 @@ namespace Diffuse {
 		VkInstance m_instance;
 		VkSurfaceKHR m_surface;
 		VkQueue m_present_queue;
+		VkFence m_in_flight_fence;
 		VkQueue m_graphics_queue;
 		VkRenderPass m_render_pass;
 		VkSwapchainKHR m_swap_chain;
@@ -29,6 +30,8 @@ namespace Diffuse {
 		VkCommandBuffer m_command_buffer;
 		VkFormat m_swap_chain_image_format;
 		VkPipelineLayout m_pipeline_layout;
+		VkSemaphore m_image_available_semaphore;
+		VkSemaphore m_render_finished_semaphore;
 		std::vector<VkImage> m_swap_chain_images;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
 		std::vector<VkImageView> m_swap_chain_image_views;
