@@ -1,3 +1,5 @@
+#pragma once
+
 #include "VulkanUtilities.hpp"
 #include <vector>
 namespace Diffuse {
@@ -15,6 +17,9 @@ namespace Diffuse {
 		bool Init(const Config& config);
 		void Draw();
 		void CleanUp(const Config& config);
+		void CleanUpSwapchain();
+		void RecreateSwapchain();
+		void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
 		GLFWwindow* GetWindow() const { return m_window; }
 	private:
 		VkDevice m_device;
@@ -44,6 +49,7 @@ namespace Diffuse {
 		int m_height = 720;
 
 		int m_current_frame = 0;
+		bool m_framebuffer_resized = false;
 		const int MAX_FRAMES_IN_FLIGHT = 2;
 	};
 }

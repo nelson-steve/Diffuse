@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Graphics.hpp"
 
 namespace Diffuse {

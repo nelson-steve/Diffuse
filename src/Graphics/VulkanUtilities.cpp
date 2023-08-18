@@ -1,4 +1,6 @@
 #include "VulkanUtilities.hpp"
+#include "Application.hpp"
+
 #include <iostream>
 #include <set>
 #include <string>
@@ -227,5 +229,10 @@ namespace Diffuse {
 		if (func != nullptr) {
 			func(instance, debugMessenger, pAllocator);
 		}
+	}
+
+	void vkUtilities::FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
+		auto graphics = reinterpret_cast<Diffuse::Graphics*>(glfwGetWindowUserPointer(window));
+		graphics->SetFramebufferResized(true);
 	}
 }

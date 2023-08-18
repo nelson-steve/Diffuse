@@ -14,6 +14,8 @@ namespace Diffuse {
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 		m_window = glfwCreateWindow(m_width, m_height, "Diffuse", nullptr, nullptr);
+		glfwSetWindowUserPointer(m_window, this);
+		glfwSetFramebufferSizeCallback(m_window, vkUtilities::FramebufferResizeCallback);
 
 		//		---Create Vulkan Instancee---
 		if (config.enable_validation_layers && !vkUtilities::CheckValidationLayerSupport()) {
@@ -438,10 +440,19 @@ namespace Diffuse {
 	void Graphics::Draw()
 	{
 		vkWaitForFences(m_device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
-		vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &imageIndex);
+		VkResult result = vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			RecreateSwapchain();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+			throw std::runtime_error("failed to acquire swap chain image!");
+		}
+
+		vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
 		vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
 		vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline);
@@ -480,21 +491,47 @@ namespace Diffuse {
 
 		presentInfo.pImageIndices = &imageIndex;
 
-		vkQueuePresentKHR(m_present_queue, &presentInfo);
+		result = vkQueuePresentKHR(m_present_queue, &presentInfo);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebuffer_resized) {
+			m_framebuffer_resized = false;
+			CleanUpSwapchain();
+		}
+		else if (result != VK_SUCCESS) {
+			throw std::runtime_error("failed to present swap chain image!");
+		}
+
 
 		m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 	}
-	void Graphics::CleanUp(const Config& config)
-	{
+
+	void Graphics::CleanUpSwapchain() {
 		for (auto framebuffer : m_swap_chain_framebuffers) {
 			vkDestroyFramebuffer(m_device, framebuffer, nullptr);
 		}
-		vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
-		vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
-		vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 		for (auto imageView : m_swap_chain_image_views)
 			vkDestroyImageView(m_device, imageView, nullptr);
+
 		vkDestroySwapchainKHR(m_device, m_swap_chain, nullptr);
+	}
+
+	void Graphics::CleanUp(const Config& config)
+	{
+		CleanUpSwapchain();
+
+		vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
+		vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+
+		vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			vkDestroySemaphore(m_device, m_render_finished_semaphores[i], nullptr);
+			vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
+			vkDestroyFence(m_device, m_in_flight_fences[i], nullptr);
+		}
+
+		vkDestroyCommandPool(m_device, m_command_pool, nullptr);
+
 		vkDestroyDevice(m_device, nullptr);
 		if (config.enable_validation_layers)
 			vkUtilities::DestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
@@ -503,5 +540,115 @@ namespace Diffuse {
 
 		glfwDestroyWindow(m_window);
 		glfwTerminate();
+	}
+
+	void Graphics::RecreateSwapchain()
+	{
+		int width = 0, height = 0;
+		glfwGetFramebufferSize(m_window, &width, &height);
+		while (width == 0 || height == 0) {
+			glfwGetFramebufferSize(m_window, &width, &height);
+			glfwWaitEvents();
+		}
+
+		vkDeviceWaitIdle(m_device);
+
+		CleanUpSwapchain();
+
+
+		// create swap chain
+		SwapChainSupportDetails swapChainSupport = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
+
+		VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swapChainSupport.formats);
+		VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swapChainSupport.presentModes);
+		VkExtent2D extent = vkUtilities::ChooseSwapExtent(swapChainSupport.capabilities, m_window);
+
+		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+			imageCount = swapChainSupport.capabilities.maxImageCount;
+		}
+
+		VkSwapchainCreateInfoKHR createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = m_surface;
+
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = surfaceFormat.format;
+		createInfo.imageColorSpace = surfaceFormat.colorSpace;
+		createInfo.imageExtent = extent;
+		createInfo.imageArrayLayers = 1;
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+		QueueFamilyIndices indices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
+		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+		if (indices.graphicsFamily != indices.presentFamily) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else {
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
+
+		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		createInfo.presentMode = presentMode;
+		createInfo.clipped = VK_TRUE;
+
+		if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swap_chain) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create swap chain!");
+		}
+
+		vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, nullptr);
+		m_swap_chain_images.resize(imageCount);
+		vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, m_swap_chain_images.data());
+
+		m_swap_chain_image_format = surfaceFormat.format;
+		m_swap_chain_extent = extent;
+
+		m_swap_chain_image_views.resize(m_swap_chain_images.size());
+
+		for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
+			VkImageViewCreateInfo createInfo{};
+			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			createInfo.image = m_swap_chain_images[i];
+			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			createInfo.format = m_swap_chain_image_format;
+			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			createInfo.subresourceRange.baseMipLevel = 0;
+			createInfo.subresourceRange.levelCount = 1;
+			createInfo.subresourceRange.baseArrayLayer = 0;
+			createInfo.subresourceRange.layerCount = 1;
+
+			if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create image views!");
+			}
+		}
+
+		m_swap_chain_framebuffers.resize(m_swap_chain_image_views.size());
+
+		for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
+			VkImageView attachments[] = {
+				m_swap_chain_image_views[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = m_render_pass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = m_swap_chain_extent.width;
+			framebufferInfo.height = m_swap_chain_extent.height;
+			framebufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create framebuffer!");
+			}
+		}
 	}
 }
