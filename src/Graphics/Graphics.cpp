@@ -406,6 +406,36 @@ namespace Diffuse {
 			return false;
 		}
 
+		// Create Vertex Buffers
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &m_vertex_buffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create vertex buffer!");
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(m_device, m_vertex_buffer, &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = vkUtilities::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_physical_device);
+
+		if (vkAllocateMemory(m_device, &allocInfo, nullptr, &m_vertex_buffer_memory) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate vertex buffer memory!");
+		}
+
+		vkBindBufferMemory(m_device, m_vertex_buffer, m_vertex_buffer_memory, 0);
+
+		void* data;
+		vkMapMemory(m_device, m_vertex_buffer_memory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+		vkUnmapMemory(m_device, m_vertex_buffer_memory);
+
 		// Create Command Buffers
 		m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
 		VkCommandBufferAllocateInfo alloc_info{};
@@ -461,7 +491,7 @@ namespace Diffuse {
 		vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
 		vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
-		vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline);
+		vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline, m_vertex_buffer);
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

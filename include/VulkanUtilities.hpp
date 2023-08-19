@@ -19,35 +19,6 @@ namespace Diffuse {
 		std::vector<VkSurfaceFormatKHR> formats;
 		std::vector<VkPresentModeKHR> presentModes;
 	};
-	struct Vertex {
-		glm::vec2 pos;
-		glm::vec3 color;
-
-		static VkVertexInputBindingDescription getBindingDescription() {
-			VkVertexInputBindingDescription bindingDescription{};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Vertex);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			return bindingDescription;
-		}
-
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-			return attributeDescriptions;
-		}
-	};
 	class vkUtilities {
 	public:
 		static bool CheckValidationLayerSupport();
@@ -64,8 +35,9 @@ namespace Diffuse {
 		static VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* m_window);
 		static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
 		static void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
-			std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline);
+			std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer);
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
+		static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physical_device);
 	};
 }

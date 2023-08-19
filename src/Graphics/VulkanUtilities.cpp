@@ -178,7 +178,7 @@ namespace Diffuse {
 	}
 
 	void vkUtilities::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
-		std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline) {
+		std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer) {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -215,6 +215,10 @@ namespace Diffuse {
 		scissor.extent = swap_chain_extent;
 		vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
+		VkBuffer vertexBuffers[] = { vertex_buffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+
 		vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
 		vkCmdEndRenderPass(command_buffer);
@@ -234,5 +238,18 @@ namespace Diffuse {
 	void vkUtilities::FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
 		auto graphics = reinterpret_cast<Diffuse::Graphics*>(glfwGetWindowUserPointer(window));
 		graphics->SetFramebufferResized(true);
+	}
+
+	uint32_t vkUtilities::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physical_device) {
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(physical_device, &memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				return i;
+			}
+		}
+
+		throw std::runtime_error("failed to find suitable memory type!");
 	}
 }

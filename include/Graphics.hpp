@@ -1,7 +1,11 @@
 #pragma once
 
 #include "VulkanUtilities.hpp"
+
+#include <glm/glm.hpp>
+
 #include <vector>
+
 namespace Diffuse {
 	struct Config {
 		bool enable_validation_layers = false;
@@ -56,6 +60,7 @@ namespace Diffuse {
 		VkInstance m_instance;
 		VkSurfaceKHR m_surface;
 		VkQueue m_present_queue;
+		VkBuffer m_vertex_buffer;
 		VkQueue m_graphics_queue;
 		VkRenderPass m_render_pass;
 		VkSwapchainKHR m_swap_chain;
@@ -65,6 +70,7 @@ namespace Diffuse {
 		VkPhysicalDevice m_physical_device;
 		VkFormat m_swap_chain_image_format;
 		VkPipelineLayout m_pipeline_layout;
+		VkDeviceMemory m_vertex_buffer_memory;
 		std::vector<VkFence> m_in_flight_fences;
 		std::vector<VkImage> m_swap_chain_images;
 		VkDebugUtilsMessengerEXT m_debug_messenger;
@@ -76,6 +82,12 @@ namespace Diffuse {
 
 		int m_width = 1200;
 		int m_height = 720;
+
+		const std::vector<Vertex> vertices = {
+			{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		};
 
 		int m_current_frame = 0;
 		bool m_framebuffer_resized = false;

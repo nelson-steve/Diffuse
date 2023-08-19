@@ -26,6 +26,11 @@ target_include_directories(${PROJECT_NAME}
         ${PROJECT_SOURCE_DIR}/include
 )
 
+
+set(glm_DIR ${PROJECT_SOURCE_DIR}/dependencies/glm/cmake/glm) # if necessary
+# add_subdirectory(glm)
+
+find_package(glm REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(OpenGL REQUIRED)
 # find_package(glfw3 REQUIRED)
@@ -37,5 +42,7 @@ include_directories(${PROJECT_SOURCE_DIR}/dependencies/include, ${PROJECT_SOURCE
 message(${PROJECT_SOURCE_DIR})
 message(${Vulkan_LIBRARIES})
 
+target_link_libraries(${PROJECT_NAME} glm::glm)
+# target_link_libraries(${PROJECT_NAME} glm)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/dependencies/lib/glfw3.lib)
 target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
