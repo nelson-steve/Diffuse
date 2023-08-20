@@ -436,6 +436,25 @@ namespace Diffuse {
 		memcpy(data, vertices.data(), (size_t)bufferInfo.size);
 		vkUnmapMemory(m_device, m_vertex_buffer_memory);
 
+		// Create Index Buffers
+		VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+		vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
+
+		//void* data;
+		vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+		memcpy(data, m_indices.data(), (size_t)bufferSize);
+		vkUnmapMemory(m_device, stagingBufferMemory);
+
+		vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_index_buffer_memory, m_physical_device, m_device);
+
+		vkUtilities::CopyBuffer(stagingBuffer, m_index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+
+		vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+		vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+
 		// Create Command Buffers
 		m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
 		VkCommandBufferAllocateInfo alloc_info{};
@@ -491,7 +510,7 @@ namespace Diffuse {
 		vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
 		vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
-		vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline, m_vertex_buffer);
+		vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline, m_vertex_buffer, m_index_buffer, m_indices.size());
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -554,6 +573,12 @@ namespace Diffuse {
 	void Graphics::CleanUp(const Config& config)
 	{
 		CleanUpSwapchain();
+
+		vkDestroyBuffer(m_device, m_index_buffer, nullptr);
+		vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
+
+		vkDestroyBuffer(m_device, m_vertex_buffer, nullptr);
+		vkFreeMemory(m_device, m_vertex_buffer_memory, nullptr);
 
 		vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
 		vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);

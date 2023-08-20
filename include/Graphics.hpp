@@ -60,6 +60,7 @@ namespace Diffuse {
 		VkInstance m_instance;
 		VkSurfaceKHR m_surface;
 		VkQueue m_present_queue;
+		VkBuffer m_index_buffer;
 		VkBuffer m_vertex_buffer;
 		VkQueue m_graphics_queue;
 		VkRenderPass m_render_pass;
@@ -70,6 +71,7 @@ namespace Diffuse {
 		VkPhysicalDevice m_physical_device;
 		VkFormat m_swap_chain_image_format;
 		VkPipelineLayout m_pipeline_layout;
+		VkDeviceMemory m_index_buffer_memory;
 		VkDeviceMemory m_vertex_buffer_memory;
 		std::vector<VkFence> m_in_flight_fences;
 		std::vector<VkImage> m_swap_chain_images;
@@ -84,9 +86,14 @@ namespace Diffuse {
 		int m_height = 720;
 
 		const std::vector<Vertex> vertices = {
-			{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+			{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+		};
+
+		const std::vector<uint16_t> m_indices = {
+			0, 1, 2, 2, 3, 0
 		};
 
 		int m_current_frame = 0;
