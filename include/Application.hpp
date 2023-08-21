@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Graphics.hpp"
+#include "GraphicsDevice.hpp"
 
 namespace Diffuse {
     class Application {
@@ -8,8 +8,8 @@ namespace Diffuse {
         void Init();
         void Update();
         void Destroy();
-    private:
-        Graphics* m_graphics;
+     private:
+        GraphicsDevice* m_graphics;
         Config m_config;
     };
 }
