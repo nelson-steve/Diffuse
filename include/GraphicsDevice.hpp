@@ -87,6 +87,7 @@ namespace Diffuse {
 
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
+        void RecreateSwapchain();
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
 

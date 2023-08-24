@@ -10,10 +10,10 @@ namespace Diffuse {
 		assert(m_window);
 	}
 
-	Window::~Window()
-	{
+	void Window::DestroyWindow() {
 		glfwDestroyWindow(m_window);
 	}
+
 	bool Window::WindowShouldClose()
 	{
 		return glfwWindowShouldClose(m_window);

@@ -1,5 +1,6 @@
 #pragma once
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 namespace Diffuse {	
@@ -10,7 +11,7 @@ namespace Diffuse {
 		uint32_t m_height = 720;
 	public:
 		Window();
-		~Window();
+		void DestroyWindow();
 
 		bool WindowShouldClose();
 
