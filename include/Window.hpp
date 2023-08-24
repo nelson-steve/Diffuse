@@ -1,14 +1,13 @@
 #pragma once
 
-class GLFWwindow;
+#include <GLFW/glfw3.h>
 
-namespace Diffuse {
-
+namespace Diffuse {	
 	class Window {
 	private:
 		GLFWwindow* m_window = nullptr;
-		uint32_t m_width;
-		uint32_t m_height;
+		uint32_t m_width = 1280;
+		uint32_t m_height = 720;
 	public:
 		Window();
 		~Window();
@@ -18,7 +17,7 @@ namespace Diffuse {
 		void PollEvents();
 
 		void SetWidth(uint32_t width)  { m_width = width;   }
-		void SetWidth(uint32_t height) { m_height = height; }
+		void SetHeight(uint32_t height) { m_height = height; }
 
 		GLFWwindow* window() const { return m_window; }
 	};

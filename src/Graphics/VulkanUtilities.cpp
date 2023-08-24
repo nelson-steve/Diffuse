@@ -240,7 +240,7 @@ namespace Diffuse {
 	}
 
 	void vkUtilities::FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
-		auto graphics = reinterpret_cast<Diffuse::Graphics*>(glfwGetWindowUserPointer(window));
+		auto graphics = reinterpret_cast<Diffuse::GraphicsDevice*>(glfwGetWindowUserPointer(window));
 		graphics->SetFramebufferResized(true);
 	}
 

@@ -13,7 +13,7 @@ namespace Diffuse {
         const std::vector<const char*> validation_layers = {
             "VK_LAYER_KHRONOS_validation"
         };
-        const std::vector<const char*> device_extensions = {
+        const std::vector<const char*> required_device_extensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
     };
@@ -48,26 +48,26 @@ namespace Diffuse {
     };
     class GraphicsDevice {
     private:
-        // == WINDOW ======================================
-        std::shared_ptr<Window>                     m_window;
+        // == WINDOW HANDLE ====================================
+        std::shared_ptr<Window>         m_window;
         // == VULKAN HANDLES =================================== 
         VkDevice                        m_device;
-        VkInstance                      m_instance;
+        VkFormat                        m_swap_chain_image_format;
         VkQueue                         m_present_queue;
         VkBuffer                        m_index_buffer;
         VkBuffer                        m_vertex_buffer;
         VkQueue                         m_graphics_queue;
+        VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
         VkPipeline                      m_graphics_pipeline;
-        VkFormat                        m_swap_chain_image_format;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;
-        VkSwapchainKHR                  m_swap_chain;
-        VkPhysicalDevice                m_physical_device;
-        VkPipelineLayout                m_pipeline_layout;
         VkDeviceMemory                  m_index_buffer_memory;
+        VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
+        VkPipelineLayout                m_pipeline_layout;
+        VkPhysicalDevice                m_physical_device;
         std::vector<VkFence>            m_in_flight_fences;
         std::vector<VkImage>            m_swap_chain_images;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
@@ -78,14 +78,17 @@ namespace Diffuse {
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
-        GraphicsDevice();
+        // @brief - Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
+        GraphicsDevice(Config config = {});
         ~GraphicsDevice();
-        //bool Init(const Config& config);
+        
+        // TODO: Think of a better place to put Draw function. Hint: Renderer class
         void Draw();
-        void CleanUp(const Config& config);
-        void CleanUpSwapchain();
-        void RecreateSwapchain();
+
+        void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
+        void CleanUp(const Config& config = {});
+        void CleanUpSwapchain();
 
         std::shared_ptr<Window> GetWindow() const { return m_window; }
 
