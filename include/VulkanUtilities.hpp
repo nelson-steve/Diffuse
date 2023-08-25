@@ -48,5 +48,6 @@ namespace Diffuse {
 		static void CreateVertexBuffer(const std::vector<Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory,
 			VkCommandPool command_pool, VkQueue graphics_queue, VkPhysicalDevice physical_device);
 		static 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool command_pool, VkDevice device, VkQueue graphics_queue);
+		static void UpdateUniformBuffers(uint32_t current_image, VkExtent2D swap_chain_extent, std::vector<void*> uniform_buffers_mapped);
 	};
 }

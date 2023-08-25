@@ -17,6 +17,11 @@ namespace Diffuse {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
     };
+    struct UniformBufferObject {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
     struct Vertex {
         glm::vec2 pos;
         glm::vec3 color;
@@ -49,8 +54,9 @@ namespace Diffuse {
     class GraphicsDevice {
     private:
         // == WINDOW HANDLE ====================================
+        // Window handle using GLFW 
         std::shared_ptr<Window>         m_window;
-        // == VULKAN HANDLES =================================== 
+        // == VULKAN HANDLES ===================================
         VkDevice                        m_device;
         VkFormat                        m_swap_chain_image_format;
         VkQueue                         m_present_queue;
@@ -68,13 +74,17 @@ namespace Diffuse {
         VkDeviceMemory                  m_vertex_buffer_memory;
         VkPipelineLayout                m_pipeline_layout;
         VkPhysicalDevice                m_physical_device;
+        std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            m_in_flight_fences;
         std::vector<VkImage>            m_swap_chain_images;
+        std::vector<VkBuffer>           m_uniform_buffers;
+        VkDescriptorSetLayout           m_descriptor_set_layout;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
         std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
+        std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:

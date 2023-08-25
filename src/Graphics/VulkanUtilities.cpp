@@ -1,6 +1,8 @@
 #include "VulkanUtilities.hpp"
 #include "Application.hpp"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
 #include <set>
 #include <string>
@@ -303,6 +305,22 @@ namespace Diffuse {
 
 		vkDestroyBuffer(device, stagingBuffer, nullptr);
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
+	}
+
+	void vkUtilities::UpdateUniformBuffers(uint32_t current_image, VkExtent2D swap_chain_extent, std::vector<void*> uniform_buffers_mapped)
+	{
+		static auto startTime = std::chrono::high_resolution_clock::now();
+
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+		UniformBufferObject ubo{};
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.proj = glm::perspective(glm::radians(45.0f), swap_chain_extent.width / (float)swap_chain_extent.height, 0.1f, 10.0f);
+		ubo.proj[1][1] *= -1;
+
+		memcpy(uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
 	}
 
 	void vkUtilities::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool command_pool, VkDevice device, VkQueue graphics_queue) {

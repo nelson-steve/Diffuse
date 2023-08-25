@@ -262,6 +262,23 @@ namespace Diffuse {
             assert(false);
         }
 
+        // Create Descriptor Set Layout 
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.pImmutableSamplers = nullptr;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
+
         // Create Graphics Pipeline
         auto vert_shader_code = Utils::File::ReadFile("../shaders/vert.spv");
         auto frag_shader_code = Utils::File::ReadFile("../shaders/frag.spv");
@@ -347,6 +364,7 @@ namespace Diffuse {
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.setLayoutCount = 0;
         pipeline_layout_info.pushConstantRangeCount = 0;
+        pipeline_layout_info.pSetLayouts = &m_descriptor_set_layout;
 
         if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
             std::cout << "failed to create pipeline layout!";
@@ -462,6 +480,18 @@ namespace Diffuse {
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
 
+        bufferSize = sizeof(UniformBufferObject);
+
+        m_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+        m_uniform_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT);
+        m_uniform_buffers_mapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffers[i], m_uniform_buffers_memory[i], m_physical_device, m_device);
+
+            vkMapMemory(m_device, m_uniform_buffers_memory[i], 0, bufferSize, 0, &m_uniform_buffers_mapped[i]);
+        }
+
         // Create Command Buffers
         m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
         VkCommandBufferAllocateInfo alloc_info{};
@@ -516,6 +546,8 @@ namespace Diffuse {
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
             throw std::runtime_error("failed to acquire swap chain image!");
         }
+
+        vkUtilities::UpdateUniformBuffers(m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
 
         vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
@@ -641,6 +673,12 @@ namespace Diffuse {
     {
         CleanUpSwapchain();
 
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            vkDestroyBuffer(m_device, m_uniform_buffers[i], nullptr);
+            vkFreeMemory(m_device, m_uniform_buffers_memory[i], nullptr);
+        }
+
+        vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
         vkDestroyBuffer(m_device, m_index_buffer, nullptr);
         vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
 
