@@ -180,7 +180,8 @@ namespace Diffuse {
 	}
 
 	void vkUtilities::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
-		std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer, VkBuffer index_buffer, int indices_size) {
+		std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer, VkBuffer index_buffer, int indices_size, 
+		VkPipelineLayout pipeline_layout, std::vector<VkDescriptorSet> descriptor_sets, int current_frame) {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -222,6 +223,8 @@ namespace Diffuse {
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
 
 		vkCmdBindIndexBuffer(command_buffer, index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
 
 		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices_size), 1, 0, 0, 0);
 

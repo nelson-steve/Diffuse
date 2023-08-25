@@ -328,7 +328,7 @@ namespace Diffuse {
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
         VkPipelineMultisampleStateCreateInfo multi_sampling{};
@@ -362,8 +362,7 @@ namespace Diffuse {
 
         VkPipelineLayoutCreateInfo pipeline_layout_info{};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_info.setLayoutCount = 0;
-        pipeline_layout_info.pushConstantRangeCount = 0;
+        pipeline_layout_info.setLayoutCount = 1;
         pipeline_layout_info.pSetLayouts = &m_descriptor_set_layout;
 
         if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
@@ -480,6 +479,7 @@ namespace Diffuse {
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
 
+        // Create Uniform Buffers
         bufferSize = sizeof(UniformBufferObject);
 
         m_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -490,6 +490,51 @@ namespace Diffuse {
             vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffers[i], m_uniform_buffers_memory[i], m_physical_device, m_device);
 
             vkMapMemory(m_device, m_uniform_buffers_memory[i], 0, bufferSize, 0, &m_uniform_buffers_mapped[i]);
+        }
+
+        VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool!");
+        }
+
+        // Create Descriptor Sets
+        std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptor_set_layout);
+        VkDescriptorSetAllocateInfo set_alloc_info{};
+        set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        set_alloc_info.descriptorPool = m_descriptor_pool;
+        set_alloc_info.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        set_alloc_info.pSetLayouts = layouts.data();
+
+        m_descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
+        if (vkAllocateDescriptorSets(m_device, &set_alloc_info, m_descriptor_sets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        }
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = m_uniform_buffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = m_descriptor_sets[i];
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+
+            vkUpdateDescriptorSets(m_device, 1, &descriptorWrite, 0, nullptr);
         }
 
         // Create Command Buffers
@@ -552,7 +597,8 @@ namespace Diffuse {
         vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
-        vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, m_graphics_pipeline, m_vertex_buffer, m_index_buffer, m_indices.size());
+        vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, 
+            m_graphics_pipeline, m_vertex_buffer, m_index_buffer, m_indices.size(), m_pipeline_layout, m_descriptor_sets, m_current_frame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -678,16 +724,14 @@ namespace Diffuse {
             vkFreeMemory(m_device, m_uniform_buffers_memory[i], nullptr);
         }
 
+        vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
         vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
         vkDestroyBuffer(m_device, m_index_buffer, nullptr);
         vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
-
         vkDestroyBuffer(m_device, m_vertex_buffer, nullptr);
         vkFreeMemory(m_device, m_vertex_buffer_memory, nullptr);
-
         vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
         vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
-
         vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -697,7 +741,6 @@ namespace Diffuse {
         }
 
         vkDestroyCommandPool(m_device, m_command_pool, nullptr);
-
         vkDestroyDevice(m_device, nullptr);
         if (config.enable_validation_layers)
             vkUtilities::DestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
@@ -708,8 +751,7 @@ namespace Diffuse {
         glfwTerminate();
     }
 
-    void GraphicsDevice::RecreateSwapchain()
-    {
+    void GraphicsDevice::RecreateSwapchain() {
         int width = 0, height = 0;
         glfwGetFramebufferSize(m_window->window(), &width, &height);
         while (width == 0 || height == 0) {

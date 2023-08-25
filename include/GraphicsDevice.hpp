@@ -72,6 +72,7 @@ namespace Diffuse {
         VkDeviceMemory                  m_index_buffer_memory;
         VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
+        VkDescriptorPool                m_descriptor_pool;
         VkPipelineLayout                m_pipeline_layout;
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
@@ -85,6 +86,7 @@ namespace Diffuse {
         std::vector<VkSemaphore>        m_image_available_semaphores;
         std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
+        std::vector<VkDescriptorSet>    m_descriptor_sets;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
