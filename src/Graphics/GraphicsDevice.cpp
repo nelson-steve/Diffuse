@@ -4,20 +4,23 @@
 #include <iostream>
 #include <set>
 
+#ifdef _DEBUG
+#define LOG_ERROR(x, message) if(!x) { std::cout<<message<<std::endl; exit(1);}
+#define LOG_WARN(x, message) if(!x) { std::cout<<message<<std::endl;}
+#define LOG_INFO(message) { std::cout<<message<<std::endl;}
+#else
+#define LOG_ERROR(x, message)
+#define LOG_WARN(x, message)
+#define LOG_INFO(message)
+#endif
+
 namespace Diffuse {
-    // TODO: Don't use asserts please 
     GraphicsDevice::GraphicsDevice(Config config) {
         // === Initializing GLFW ===
         int result = glfwInit();
-        if (result != GLFW_TRUE)
-        {
-            // TODO: Add logging and use logging which only works in Debug build
-            // e.g. -> LOG::LOG_ERROR(result, "glfw failed to intitilize");
-            std::cout << "Failed to intitialize GLFW";
-            assert(false); // TODO: dont use asserts, find a better solution
-        }
+        LOG_ERROR(result == GLFW_TRUE, "Failed to intitialize GLFW");
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         m_window = std::make_unique<Window>();
         glfwSetWindowUserPointer(m_window->window(), this);
         glfwSetFramebufferSizeCallback(m_window->window(), vkUtilities::FramebufferResizeCallback);
@@ -60,8 +63,7 @@ namespace Diffuse {
         }
 
         if (vkCreateInstance(&instance_create_info, nullptr, &m_instance) != VK_SUCCESS) {
-            std::cout << "Failed to create Vulkan instance!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create Vulkan instance!");
         }
         // ===============================        
         // --Setup Debug Messenger--
@@ -70,14 +72,12 @@ namespace Diffuse {
             vkUtilities::PopulateDebugMessengerCreateInfo(messenger_create_info);
 
             if (vkUtilities::CreateDebugUtilsMessengerEXT(m_instance, &messenger_create_info, nullptr, &m_debug_messenger) != VK_SUCCESS) {
-                std::cout << "Failed to set up debug messenger";
-                assert(false);
+                LOG_WARN(false, "**Failed to set up debug messenger**");
             }
         }
         // --Create Surface--
         if (glfwCreateWindowSurface(m_instance, m_window->window(), nullptr, &m_surface) != VK_SUCCESS) {
-            std::cout << "failed to create window surface!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create window surface!");
         }
 
         // --Pick Physical Device--
@@ -85,8 +85,7 @@ namespace Diffuse {
         vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
 
         if (device_count == 0) {
-            std::cout << "failed to find GPUs with Vulkan support!";
-            assert(false);
+            LOG_ERROR(false, "failed to find GPUs with Vulkan support!");
         }
 
         std::vector<VkPhysicalDevice> devices(device_count);
@@ -100,8 +99,7 @@ namespace Diffuse {
         }
 
         if (m_physical_device == VK_NULL_HANDLE) {
-            std::cout << "failed to find a suitable GPU!";
-            assert(false);
+            LOG_ERROR(false, "Failed to find a suitable GPU!");
         }
 
         //		--Create Logical Device--
@@ -144,8 +142,7 @@ namespace Diffuse {
         }
 
         if (vkCreateDevice(m_physical_device, &device_create_info, nullptr, &m_device) != VK_SUCCESS) {
-            std::cout << "failed to create logical device!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create logical device!");
         }
 
         vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphics_queue);
@@ -194,8 +191,7 @@ namespace Diffuse {
         swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
         if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
-            std::cout << "failed to create swap chain!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create swap chain!");
         }
 
         vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, nullptr);
@@ -225,8 +221,7 @@ namespace Diffuse {
             image_views_create_info.subresourceRange.layerCount = 1;
 
             if (vkCreateImageView(m_device, &image_views_create_info, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
-                std::cout << "failed to create image views!";
-                assert(false);
+                LOG_ERROR(false, "Failed to create image views!");
             }
         }
 
@@ -258,8 +253,7 @@ namespace Diffuse {
         render_pass_info.pSubpasses = &subpass;
 
         if (vkCreateRenderPass(m_device, &render_pass_info, nullptr, &m_render_pass) != VK_SUCCESS) {
-            std::cout << "failed to create render pass!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create render pass!");
         }
 
         // Create Descriptor Set Layout 
@@ -276,7 +270,7 @@ namespace Diffuse {
         layoutInfo.pBindings = &uboLayoutBinding;
 
         if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor set layout!");
+            LOG_ERROR(false, "Failed to create descriptor set layout!");
         }
 
         // Create Graphics Pipeline
@@ -366,8 +360,7 @@ namespace Diffuse {
         pipeline_layout_info.pSetLayouts = &m_descriptor_set_layout;
 
         if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
-            std::cout << "failed to create pipeline layout!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create pipeline layout!");
         }
 
         VkGraphicsPipelineCreateInfo pipeline_info{};
@@ -387,8 +380,7 @@ namespace Diffuse {
         pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
         if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline) != VK_SUCCESS) {
-            std::cout << "failed to create graphics pipeline!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create graphics pipeline!");
         }
 
         vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
@@ -412,8 +404,7 @@ namespace Diffuse {
             framebuffer_info.layers = 1;
 
             if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
-                std::cout << "failed to create framebuffer!";
-                assert(false);
+                LOG_ERROR(false, "Failed to create framebuffer!");
             }
         }
 
@@ -426,8 +417,7 @@ namespace Diffuse {
         pool_info.queueFamilyIndex = indices.graphicsFamily.value();
 
         if (vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool) != VK_SUCCESS) {
-            std::cout << "failed to create command pool!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create command pool!");
         }
 
         // Create Vertex Buffers
@@ -438,7 +428,7 @@ namespace Diffuse {
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &m_vertex_buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create vertex buffer!");
+            LOG_ERROR(false, "Failed to create vertex buffer!");
         }
 
         VkMemoryRequirements memRequirements;
@@ -450,7 +440,7 @@ namespace Diffuse {
         allocInfo.memoryTypeIndex = vkUtilities::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_physical_device);
 
         if (vkAllocateMemory(m_device, &allocInfo, nullptr, &m_vertex_buffer_memory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate vertex buffer memory!");
+            LOG_ERROR(false, "failed to allocate vertex buffer memory!");
         }
 
         vkBindBufferMemory(m_device, m_vertex_buffer, m_vertex_buffer_memory, 0);
@@ -503,7 +493,7 @@ namespace Diffuse {
         poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor pool!");
+            LOG_ERROR(false, "Failed to create descriptor pool!");
         }
 
         // Create Descriptor Sets
@@ -516,7 +506,7 @@ namespace Diffuse {
 
         m_descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
         if (vkAllocateDescriptorSets(m_device, &set_alloc_info, m_descriptor_sets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets!");
+            LOG_ERROR(false, "failed to allocate descriptor sets!");
         }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -546,8 +536,7 @@ namespace Diffuse {
         alloc_info.commandBufferCount = (uint32_t)m_command_buffers.size();
 
         if (vkAllocateCommandBuffers(m_device, &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
-            std::cout << "failed to allocate command buffers!";
-            assert(false);
+            LOG_ERROR(false, "Failed to allocate command buffers!");
         }
 
         // Create Sync Obects
@@ -566,8 +555,7 @@ namespace Diffuse {
             if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphores[i]) != VK_SUCCESS ||
                 vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphores[i]) != VK_SUCCESS ||
                 vkCreateFence(m_device, &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS) {
-                std::cout << "failed to create synchronization objects for a frame!";
-                assert(false);
+                LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
             }
         }
         // SUCCESS
@@ -589,7 +577,7 @@ namespace Diffuse {
             return;
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-            throw std::runtime_error("failed to acquire swap chain image!");
+            LOG_ERROR(false, "Failed to acquire swap chain image!");
         }
 
         vkUtilities::UpdateUniformBuffers(m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
@@ -617,9 +605,7 @@ namespace Diffuse {
         submitInfo.pSignalSemaphores = signalSemaphores;
 
         if (vkQueueSubmit(m_graphics_queue, 1, &submitInfo, m_in_flight_fences[m_current_frame]) != VK_SUCCESS) {
-            std::cout << "failed to submit draw command buffer!";
-            // TODO better error handling
-            return;
+            LOG_ERROR(false, "failed to submit draw command buffer!");
         }
 
         VkPresentInfoKHR presentInfo{};
@@ -641,10 +627,8 @@ namespace Diffuse {
             CleanUpSwapchain();
         }
         else if (result != VK_SUCCESS) {
-            throw std::runtime_error("failed to present swap chain image!");
+            LOG_ERROR(false, "failed to present swap chain image!");
         }
-
-
         m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
@@ -693,8 +677,7 @@ namespace Diffuse {
         swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
         if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
-            std::cout << "failed to create swap chain!";
-            assert(false);
+            LOG_ERROR(false, "Failed to create swap chain!");
         }
 
         vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, nullptr);
@@ -805,7 +788,7 @@ namespace Diffuse {
         createInfo.clipped = VK_TRUE;
 
         if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swap_chain) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create swap chain!");
+            LOG_ERROR(false, "Failed to create swap chain!");
         }
 
         vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, nullptr);
@@ -834,7 +817,7 @@ namespace Diffuse {
             createInfo.subresourceRange.layerCount = 1;
 
             if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create image views!");
+                LOG_ERROR(false, "Failed to create image views!");
             }
         }
 
@@ -855,7 +838,7 @@ namespace Diffuse {
             framebufferInfo.layers = 1;
 
             if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create framebuffer!");
+                LOG_ERROR(false, "Failed to create framebuffer!");
             }
         }
     }
