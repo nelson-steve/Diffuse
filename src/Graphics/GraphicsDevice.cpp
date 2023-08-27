@@ -1,6 +1,9 @@
 #include "GraphicsDevice.hpp"
 #include "ReadFile.hpp"
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <iostream>
 #include <set>
 
@@ -43,6 +46,11 @@ namespace Diffuse {
 
         std::vector<const char*> extensions = vkUtilities::GetRequiredExtensions(false); // TODO: add a boolean for if validation layers is enabled
 
+        // TODO: Use multiple validation layers as a backup 
+        const std::vector<const char*> validation_layers = {
+            "VK_LAYER_KHRONOS_validation",
+        };
+
         VkInstanceCreateInfo instance_create_info{};
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instance_create_info.pApplicationInfo = &app_info;
@@ -51,7 +59,6 @@ namespace Diffuse {
         instance_create_info.enabledLayerCount = static_cast<uint32_t>(config.validation_layers.size());
         instance_create_info.ppEnabledLayerNames = config.validation_layers.data();
 
-        // Configuring validation layers if enabled
         if (config.enable_validation_layers) {
             VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
             debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -76,6 +83,7 @@ namespace Diffuse {
             }
         }
         // --Create Surface--
+        // TODO: Use VkCreateWin32SurfaceKHR instead
         if (glfwCreateWindowSurface(m_instance, m_window->window(), nullptr, &m_surface) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create window surface!");
         }
@@ -155,7 +163,7 @@ namespace Diffuse {
         VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swap_chain_support.presentModes);
         VkExtent2D extent = vkUtilities::ChooseSwapExtent(swap_chain_support.capabilities, m_window->window());
 
-        uint32_t image_count = swap_chain_support.capabilities.minImageCount + 1;
+        uint32_t image_count = swap_chain_support.capabilities.minImageCount + 2;
         if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount) {
             image_count = swap_chain_support.capabilities.maxImageCount;
         }
@@ -266,7 +274,7 @@ namespace Diffuse {
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
+        layoutInfo.bindingCount = 1; // TODO: use size of uboLayoutBinding here
         layoutInfo.pBindings = &uboLayoutBinding;
 
         if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
@@ -558,6 +566,7 @@ namespace Diffuse {
                 LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
             }
         }
+
         // SUCCESS
     }
 

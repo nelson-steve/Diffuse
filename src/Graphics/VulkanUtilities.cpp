@@ -60,7 +60,7 @@ namespace Diffuse {
 			}
 
 			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);	
 
 			if (presentSupport) {
 				indices.presentFamily = i;

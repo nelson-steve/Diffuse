@@ -120,4 +120,5 @@ namespace Diffuse {
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 2;
     };
+    GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 }
