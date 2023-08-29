@@ -1,9 +1,6 @@
 #include "GraphicsDevice.hpp"
 #include "ReadFile.hpp"
 
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
-
 #include <iostream>
 #include <set>
 
@@ -282,8 +279,8 @@ namespace Diffuse {
         }
 
         // Create Graphics Pipeline
-        auto vert_shader_code = Utils::File::ReadFile("../shaders/vert.spv");
-        auto frag_shader_code = Utils::File::ReadFile("../shaders/frag.spv");
+        auto vert_shader_code = Utils::File::ReadFile("shaders/vert.spv");
+        auto frag_shader_code = Utils::File::ReadFile("shaders/frag.spv");
 
         VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
         VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);

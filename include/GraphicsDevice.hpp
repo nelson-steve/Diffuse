@@ -97,6 +97,8 @@ namespace Diffuse {
         // TODO: Think of a better place to put Draw function. Hint: Renderer class
         void Draw();
 
+        void CreateVertexBuffer();
+        void CreateIndexBuffer();
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
@@ -120,5 +122,4 @@ namespace Diffuse {
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 2;
     };
-    GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 }

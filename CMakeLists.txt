@@ -31,8 +31,6 @@ target_include_directories(${PROJECT_NAME}
 
 set(glm_DIR ${PROJECT_SOURCE_DIR}/dependencies/glm/cmake/glm)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/dependencies/VulkanMemoryAllocator)
-
 find_package(Vulkan REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
@@ -46,5 +44,4 @@ message(${Vulkan_LIBRARIES})
 
 target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/dependencies/lib/glfw3.lib)
-target_link_libraries(${PROJECT_NAME} GPUOpen::VulkanMemoryAllocator)
 target_link_libraries(${PROJECT_NAME} glm::glm)

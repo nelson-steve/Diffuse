@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\dev\New folder\Diffuse\CMakeFiles\cfd79cd80a46fdd69618eddec14718af\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\dev\New folder\Diffuse\dependencies\glm\cmake\glm\glmConfig-version.cmake">
+      <Filter>Buildsystem Input Files\dependencies\glm\cmake\glm</Filter>
+    </None>
+    <None Include="C:\dev\New folder\Diffuse\dependencies\glm\cmake\glm\glmConfig.cmake">
+      <Filter>Buildsystem Input Files\dependencies\glm\cmake\glm</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{354D1ABF-BC7B-3EBF-9A0B-4509711A668B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Buildsystem Input Files\dependencies\glm\cmake\glm">
+      <UniqueIdentifier>{56E90578-CD11-3EA9-8555-746B803E3AA7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
