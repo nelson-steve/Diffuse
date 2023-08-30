@@ -22,6 +22,7 @@ namespace Diffuse {
     }
     void Application::Destroy()
     {
+        m_graphics->CleanUp();
         delete m_graphics;
     }
 }

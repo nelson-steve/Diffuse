@@ -23,7 +23,7 @@ namespace Diffuse {
         glm::mat4 proj;
     };
     struct Vertex {
-        glm::vec2 pos;
+        glm::vec3 pos;
         glm::vec3 color;
 
         static VkVertexInputBindingDescription getBindingDescription() {
@@ -40,7 +40,7 @@ namespace Diffuse {
 
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+            attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
             attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
             attributeDescriptions[1].binding = 0;
@@ -63,13 +63,16 @@ namespace Diffuse {
         VkBuffer                        m_index_buffer;
         VkBuffer                        m_vertex_buffer;
         VkQueue                         m_graphics_queue;
+        VkImage                         m_depth_image;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
         VkPipeline                      m_graphics_pipeline;
+        VkImageView                     m_depth_image_view;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;
         VkDeviceMemory                  m_index_buffer_memory;
+        VkDeviceMemory                  m_depth_image_memory;
         VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
         VkDescriptorPool                m_descriptor_pool;
@@ -92,11 +95,11 @@ namespace Diffuse {
     public:
         // @brief - Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
         GraphicsDevice(Config config = {});
-        ~GraphicsDevice();
         
         // TODO: Think of a better place to put Draw function. Hint: Renderer class
         void Draw();
 
+        void LoadModal();
         void CreateVertexBuffer();
         void CreateIndexBuffer();
         void CreateSwapchain();
@@ -106,16 +109,21 @@ namespace Diffuse {
         void CleanUpSwapchain();
 
         std::shared_ptr<Window> GetWindow() const { return m_window; }
+        const std::vector<Vertex> m_vertices = {
+            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+            {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+            {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+            {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}},
 
-        const std::vector<Vertex> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+            {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}
         };
 
         const std::vector<uint16_t> m_indices = {
-            0, 1, 2, 2, 3, 0
+            0, 1, 2, 2, 3, 0,
+            4, 5, 6, 6, 7, 4
         };
 
         int m_current_frame = 0;

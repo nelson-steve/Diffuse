@@ -231,31 +231,57 @@ namespace Diffuse {
         }
 
         // Create Render Pass
-        VkAttachmentDescription color_attachment_desc{};
-        color_attachment_desc.format = m_swap_chain_image_format;
-        color_attachment_desc.samples = VK_SAMPLE_COUNT_1_BIT;
-        color_attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        color_attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        color_attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        color_attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        color_attachment_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        color_attachment_desc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkAttachmentDescription color_attachment{};
+        color_attachment.format = m_swap_chain_image_format;
+        color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentDescription depth_attachment{};
+        depth_attachment.format = vkUtilities::FindDepthFormat(m_physical_device);
+        depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference color_attachment_ref{};
         color_attachment_ref.attachment = 0;
         color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+        VkAttachmentReference depthAttachmentRef{};
+        depthAttachmentRef.attachment = 1;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
         VkSubpassDescription subpass{};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &color_attachment_ref;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        std::array<VkAttachmentDescription, 2> attachments = { color_attachment, depth_attachment };
         VkRenderPassCreateInfo render_pass_info{};
         render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        render_pass_info.attachmentCount = 1;
-        render_pass_info.pAttachments = &color_attachment_desc;
+        render_pass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+        render_pass_info.pAttachments = attachments.data();
         render_pass_info.subpassCount = 1;
         render_pass_info.pSubpasses = &subpass;
+        render_pass_info.dependencyCount = 1;
+        render_pass_info.pDependencies = &dependency;
 
         if (vkCreateRenderPass(m_device, &render_pass_info, nullptr, &m_render_pass) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create render pass!");
@@ -335,6 +361,14 @@ namespace Diffuse {
         multi_sampling.sampleShadingEnable = VK_FALSE;
         multi_sampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+        VkPipelineDepthStencilStateCreateInfo depthStencil{};
+        depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable = VK_TRUE;
+        depthStencil.depthWriteEnable = VK_TRUE;
+        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.stencilTestEnable = VK_FALSE;
+
         VkPipelineColorBlendAttachmentState color_blend_attachment{};
         color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         color_blend_attachment.blendEnable = VK_FALSE;
@@ -377,6 +411,7 @@ namespace Diffuse {
         pipeline_info.pViewportState = &viewport_state;
         pipeline_info.pRasterizationState = &rasterizer;
         pipeline_info.pMultisampleState = &multi_sampling;
+        pipeline_info.pDepthStencilState = &depthStencil;
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.pDynamicState = &dynamic_state;
         pipeline_info.layout = m_pipeline_layout;
@@ -391,28 +426,6 @@ namespace Diffuse {
         vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
         vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
 
-        // Create Framebuffers
-        m_swap_chain_framebuffers.resize(m_swap_chain_image_views.size());
-
-        for (size_t i = 0; i < m_swap_chain_image_views.size(); i++) {
-            VkImageView attachments[] = {
-                m_swap_chain_image_views[i]
-            };
-
-            VkFramebufferCreateInfo framebuffer_info{};
-            framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebuffer_info.renderPass = m_render_pass;
-            framebuffer_info.attachmentCount = 1;
-            framebuffer_info.pAttachments = attachments;
-            framebuffer_info.width = m_swap_chain_extent.width;
-            framebuffer_info.height = m_swap_chain_extent.height;
-            framebuffer_info.layers = 1;
-
-            if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create framebuffer!");
-            }
-        }
-
         // Create Command Pool
         //QueueFamilyIndices queueFamilyIndices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
 
@@ -425,57 +438,38 @@ namespace Diffuse {
             LOG_ERROR(false, "Failed to create command pool!");
         }
 
-        // Create Vertex Buffers
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        // Create Depth Resource
 
-        if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &m_vertex_buffer) != VK_SUCCESS) {
-            LOG_ERROR(false, "Failed to create vertex buffer!");
+        VkFormat depthFormat = vkUtilities::FindDepthFormat(m_physical_device);
+
+        vkUtilities::CreateImage(m_swap_chain_extent.width, m_swap_chain_extent.height, m_device, m_physical_device, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depth_image, m_depth_image_memory);
+        m_depth_image_view = vkUtilities::CreateImageView(m_depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, m_device);
+
+        // Create Framebuffers
+        m_swap_chain_framebuffers.resize(m_swap_chain_image_views.size());
+
+        for (size_t i = 0; i < m_swap_chain_image_views.size(); i++) {
+            std::array<VkImageView, 2> attachments = {
+                m_swap_chain_image_views[i],
+                m_depth_image_view
+            };
+
+            VkFramebufferCreateInfo framebuffer_info{};
+            framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_info.renderPass = m_render_pass;
+            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebuffer_info.pAttachments = attachments.data();
+            framebuffer_info.width = m_swap_chain_extent.width;
+            framebuffer_info.height = m_swap_chain_extent.height;
+            framebuffer_info.layers = 1;
+
+            if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
+                LOG_ERROR(false, "Failed to create framebuffer!");
+            }
         }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(m_device, m_vertex_buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = vkUtilities::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_physical_device);
-
-        if (vkAllocateMemory(m_device, &allocInfo, nullptr, &m_vertex_buffer_memory) != VK_SUCCESS) {
-            LOG_ERROR(false, "failed to allocate vertex buffer memory!");
-        }
-
-        vkBindBufferMemory(m_device, m_vertex_buffer, m_vertex_buffer_memory, 0);
-
-        void* data;
-        vkMapMemory(m_device, m_vertex_buffer_memory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-        vkUnmapMemory(m_device, m_vertex_buffer_memory);
-
-        // Create Index Buffers
-        VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
-
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
-
-        //void* data;
-        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, m_indices.data(), (size_t)bufferSize);
-        vkUnmapMemory(m_device, stagingBufferMemory);
-
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_index_buffer_memory, m_physical_device, m_device);
-
-        vkUtilities::CopyBuffer(stagingBuffer, m_index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
-
-        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
-        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
 
         // Create Uniform Buffers
-        bufferSize = sizeof(UniformBufferObject);
+        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
         m_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
         m_uniform_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT);
@@ -564,11 +558,53 @@ namespace Diffuse {
             }
         }
 
+        CreateVertexBuffer();
+        CreateIndexBuffer();
         // SUCCESS
     }
 
-    GraphicsDevice::~GraphicsDevice() {
-        CleanUp();
+    void GraphicsDevice::LoadModal()
+    {
+
+    }
+
+    void GraphicsDevice::CreateVertexBuffer() {
+        VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
+
+        void* data;
+        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, m_vertices.data(), (size_t)bufferSize);
+        vkUnmapMemory(m_device, stagingBufferMemory);
+
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertex_buffer, m_vertex_buffer_memory, m_physical_device, m_device);
+
+        vkUtilities::CopyBuffer(stagingBuffer, m_vertex_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+
+        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+    }
+    void GraphicsDevice::CreateIndexBuffer() {
+        VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
+
+        void* data;
+        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, m_indices.data(), (size_t)bufferSize);
+        vkUnmapMemory(m_device, stagingBufferMemory);
+
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_index_buffer_memory, m_physical_device, m_device);
+
+        vkUtilities::CopyBuffer(stagingBuffer, m_index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+
+        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
 
     void GraphicsDevice::Draw()

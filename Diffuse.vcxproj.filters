@@ -1,51 +1,57 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="C:\dev\New folder\Diffuse\src\Application\Application.cpp">
+    <ClCompile Include="C:\dev\Diffuse\src\Application\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\dev\New folder\Diffuse\src\Graphics\GraphicsDevice.cpp">
+    <ClCompile Include="C:\dev\Diffuse\src\Graphics\GraphicsDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\dev\New folder\Diffuse\src\Graphics\Window.cpp">
+    <ClCompile Include="C:\dev\Diffuse\src\Renderer\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\dev\New folder\Diffuse\src\Graphics\VulkanUtilities.cpp">
+    <ClCompile Include="C:\dev\Diffuse\src\Graphics\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\dev\New folder\Diffuse\src\Utils\ReadFile.cpp">
+    <ClCompile Include="C:\dev\Diffuse\src\Graphics\VulkanUtilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\dev\New folder\Diffuse\src\main.cpp">
+    <ClCompile Include="C:\dev\Diffuse\src\Utils\ReadFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\Diffuse\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="C:\dev\New folder\Diffuse\include\Application.hpp">
+    <ClInclude Include="C:\dev\Diffuse\include\Application.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\dev\New folder\Diffuse\include\GraphicsDevice.hpp">
+    <ClInclude Include="C:\dev\Diffuse\include\GraphicsDevice.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\dev\New folder\Diffuse\include\Window.hpp">
+    <ClInclude Include="C:\dev\Diffuse\include\Renderer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\dev\New folder\Diffuse\include\VulkanUtilities.hpp">
+    <ClInclude Include="C:\dev\Diffuse\include\Window.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\dev\New folder\Diffuse\include\ReadFile.hpp">
+    <ClInclude Include="C:\dev\Diffuse\include\VulkanUtilities.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\dev\Diffuse\include\ReadFile.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\dev\New folder\Diffuse\CMakeLists.txt" />
+    <CustomBuild Include="C:\dev\Diffuse\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{D14F4008-A81C-3AE0-B12D-DAB0FB3A0A11}</UniqueIdentifier>
+      <UniqueIdentifier>{4C449322-3A28-32BF-8B8C-F0064DBD5A95}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{5C1FFD00-2BC9-3443-BBF0-93508300F003}</UniqueIdentifier>
+      <UniqueIdentifier>{CE50CE17-3D34-3CC3-844C-7274651B9FD4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

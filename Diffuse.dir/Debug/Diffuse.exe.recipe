@@ -2,10 +2,10 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\dev\New folder\Diffuse\x64\Debug\ZERO_CHECK</FullPath>
+      <FullPath>C:\dev\Diffuse\x64\Debug\ZERO_CHECK</FullPath>
     </ProjectOutput>
     <ProjectOutput>
-      <FullPath>C:\dev\New folder\Diffuse\Debug\Diffuse.exe</FullPath>
+      <FullPath>C:\dev\Diffuse\Debug\Diffuse.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

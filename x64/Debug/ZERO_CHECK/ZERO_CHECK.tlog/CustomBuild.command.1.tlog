@@ -1,6 +1,6 @@
-^C:\DEV\NEW FOLDER\DIFFUSE\CMAKEFILES\CFD79CD80A46FDD69618EDDEC14718AF\GENERATE.STAMP.RULE
+^C:\DEV\DIFFUSE\CMAKEFILES\B2A137B41AF749DA4FC51C82E8E7564D\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/dev/New folder/Diffuse" "-BC:/dev/New folder/Diffuse" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/dev/New folder/Diffuse/Diffuse.sln"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/dev/Diffuse -BC:/dev/Diffuse --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/dev/Diffuse/Diffuse.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

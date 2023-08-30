@@ -7,6 +7,7 @@ set (CMAKE_CXX_STANDARD 20)
 set(SOURCES
     src/Application/Application.cpp
     src/Graphics/GraphicsDevice.cpp
+    src/Renderer/Renderer.cpp
     src/Graphics/Window.cpp
     src/Graphics/VulkanUtilities.cpp
     src/Utils/ReadFile.cpp
@@ -16,6 +17,7 @@ set(SOURCES
 set(HEADERS
     include/Application.hpp
     include/GraphicsDevice.hpp
+    include/Renderer.hpp
     include/Window.hpp
     include/VulkanUtilities.hpp
     include/ReadFile.hpp

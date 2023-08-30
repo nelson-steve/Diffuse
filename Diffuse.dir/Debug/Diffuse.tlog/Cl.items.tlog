@@ -1,6 +1,7 @@
-C:\dev\New folder\Diffuse\src\Application\Application.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Application.obj
-C:\dev\New folder\Diffuse\src\Graphics\GraphicsDevice.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\GraphicsDevice.obj
-C:\dev\New folder\Diffuse\src\Graphics\Window.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Window.obj
-C:\dev\New folder\Diffuse\src\Graphics\VulkanUtilities.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\VulkanUtilities.obj
-C:\dev\New folder\Diffuse\src\Utils\ReadFile.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\ReadFile.obj
-C:\dev\New folder\Diffuse\src\main.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\main.obj
+C:\dev\Diffuse\src\Application\Application.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Application.obj
+C:\dev\Diffuse\src\Graphics\GraphicsDevice.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\GraphicsDevice.obj
+C:\dev\Diffuse\src\Renderer\Renderer.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Renderer.obj
+C:\dev\Diffuse\src\Graphics\Window.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Window.obj
+C:\dev\Diffuse\src\Graphics\VulkanUtilities.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\VulkanUtilities.obj
+C:\dev\Diffuse\src\Utils\ReadFile.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\ReadFile.obj
+C:\dev\Diffuse\src\main.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\main.obj
