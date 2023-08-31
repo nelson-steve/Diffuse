@@ -1,6 +1,9 @@
 #include "VulkanUtilities.hpp"
 #include "Application.hpp"
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
@@ -224,14 +227,14 @@ namespace Diffuse {
 		VkBuffer vertexBuffers[] = { vertex_buffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-
-		vkCmdBindIndexBuffer(command_buffer, index_buffer, 0, VK_INDEX_TYPE_UINT16);
-
+		
+		vkCmdBindIndexBuffer(command_buffer, index_buffer, 0, VK_INDEX_TYPE_UINT32);
+		
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
-
+		
 		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices_size), 1, 0, 0, 0);
 
-		//vkCmdDraw(command_buffer, 3, 1, 0, 0);
+		//vkCmdDraw(command_buffer, indices_size, 1, 0, 0);
 
 		vkCmdEndRenderPass(command_buffer);
 

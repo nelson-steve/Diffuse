@@ -1,12 +1,9 @@
 ﻿  Application.cpp
   GraphicsDevice.cpp
-C:\dev\Diffuse\src\Graphics\GraphicsDevice.cpp(631,81): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\dev\Diffuse\src\Graphics\GraphicsDevice.cpp(591,38): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
   VulkanUtilities.cpp
-  Window.cpp
   Renderer.cpp
-  ReadFile.cpp
+C:\dev\Diffuse\src\Renderer\Renderer.cpp(82,46): warning C4834: discarding return value of function with 'nodiscard' attribute
   main.cpp
   Generating Code...
-  LINK : C:\dev\Diffuse\Debug\Diffuse.exe not found or not built by the last incremental link; performing full link
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   Diffuse.vcxproj -> C:\dev\Diffuse\Debug\Diffuse.exe

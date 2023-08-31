@@ -558,8 +558,8 @@ namespace Diffuse {
             }
         }
 
-        CreateVertexBuffer();
-        CreateIndexBuffer();
+        //CreateVertexBuffer();
+        //CreateIndexBuffer();
         // SUCCESS
     }
 
@@ -568,8 +568,8 @@ namespace Diffuse {
 
     }
 
-    void GraphicsDevice::CreateVertexBuffer() {
-        VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
+    void GraphicsDevice::CreateVertexBuffer(const std::vector<Vertex> vertices) {
+        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -577,7 +577,7 @@ namespace Diffuse {
 
         void* data;
         vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, m_vertices.data(), (size_t)bufferSize);
+        memcpy(data, vertices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
         vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertex_buffer, m_vertex_buffer_memory, m_physical_device, m_device);
@@ -587,8 +587,9 @@ namespace Diffuse {
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
-    void GraphicsDevice::CreateIndexBuffer() {
-        VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
+    void GraphicsDevice::CreateIndexBuffer(const std::vector<uint32_t> indices) {
+        m_indices_size = indices.size();
+        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -596,7 +597,7 @@ namespace Diffuse {
 
         void* data;
         vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, m_indices.data(), (size_t)bufferSize);
+        memcpy(data, indices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
         vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_index_buffer_memory, m_physical_device, m_device);
@@ -628,7 +629,7 @@ namespace Diffuse {
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
         vkUtilities::RecordCommandBuffer(m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, 
-            m_graphics_pipeline, m_vertex_buffer, m_index_buffer, m_indices.size(), m_pipeline_layout, m_descriptor_sets, m_current_frame);
+            m_graphics_pipeline, m_vertex_buffer, m_index_buffer, m_indices_size, m_pipeline_layout, m_descriptor_sets, m_current_frame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

@@ -3,7 +3,11 @@
 #include "VulkanUtilities.hpp"
 #include "Window.hpp"
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 
 #include <vector>
 
@@ -50,7 +54,12 @@ namespace Diffuse {
 
             return attributeDescriptions;
         }
+
+        bool operator==(const Vertex& other) const {
+            return pos == other.pos && color == other.color;
+        }
     };
+
     class GraphicsDevice {
     private:
         // == WINDOW HANDLE ====================================
@@ -100,8 +109,8 @@ namespace Diffuse {
         void Draw();
 
         void LoadModal();
-        void CreateVertexBuffer();
-        void CreateIndexBuffer();
+        void CreateVertexBuffer(const std::vector<Vertex> vertices);
+        void CreateIndexBuffer(const std::vector<uint32_t> vertices);
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
@@ -109,25 +118,35 @@ namespace Diffuse {
         void CleanUpSwapchain();
 
         std::shared_ptr<Window> GetWindow() const { return m_window; }
-        const std::vector<Vertex> m_vertices = {
-            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-            {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-            {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}},
+        //const std::vector<Vertex> m_vertices = {
+        //    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        //    {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        //    {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        //    {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}},
+        //
+        //    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        //    {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        //    {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+        //    {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}
+        //};
 
-            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}
-        };
+        int m_indices_size;
 
-        const std::vector<uint16_t> m_indices = {
-            0, 1, 2, 2, 3, 0,
-            4, 5, 6, 6, 7, 4
-        };
+        //const std::vector<uint16_t> m_indices = {
+        //    0, 1, 2, 2, 3, 0,
+        //    4, 5, 6, 6, 7, 4
+        //};
 
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 2;
+    };
+}
+
+namespace std {
+    template<> struct hash<Diffuse::Vertex> {
+        size_t operator()(Diffuse::Vertex const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1);
+        }
     };
 }

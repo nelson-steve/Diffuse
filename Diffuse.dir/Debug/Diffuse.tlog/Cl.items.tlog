@@ -1,4 +1,5 @@
 C:\dev\Diffuse\src\Application\Application.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Application.obj
+C:\dev\Diffuse\src\Graphics\tiny_obj_loader.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\tiny_obj_loader.obj
 C:\dev\Diffuse\src\Graphics\GraphicsDevice.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\GraphicsDevice.obj
 C:\dev\Diffuse\src\Renderer\Renderer.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Renderer.obj
 C:\dev\Diffuse\src\Graphics\Window.cpp;C:\dev\Diffuse\Diffuse.dir\Debug\Window.obj
