@@ -732,6 +732,9 @@ namespace Diffuse {
     }
 
     void GraphicsDevice::CleanUpSwapchain() {
+        vkDestroyImageView(m_device, m_depth_image_view, nullptr);
+        vkDestroyImage(m_device, m_depth_image, nullptr);
+        vkFreeMemory(m_device, m_depth_image_memory, nullptr);
         for (auto framebuffer : m_swap_chain_framebuffers) {
             vkDestroyFramebuffer(m_device, framebuffer, nullptr);
         }
@@ -743,6 +746,9 @@ namespace Diffuse {
 
     void GraphicsDevice::CleanUp(const Config& config)
     {
+        glfwWaitEvents();
+        vkDeviceWaitIdle(m_device);
+
         CleanUpSwapchain();
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -754,6 +760,7 @@ namespace Diffuse {
         vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
         vkDestroyBuffer(m_device, m_index_buffer, nullptr);
         vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
+        
         vkDestroyBuffer(m_device, m_vertex_buffer, nullptr);
         vkFreeMemory(m_device, m_vertex_buffer_memory, nullptr);
         vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);

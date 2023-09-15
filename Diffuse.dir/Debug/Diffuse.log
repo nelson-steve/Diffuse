@@ -1,9 +1,3 @@
-﻿  Application.cpp
-  GraphicsDevice.cpp
+﻿  GraphicsDevice.cpp
 C:\dev\Diffuse\src\Graphics\GraphicsDevice.cpp(591,38): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-  VulkanUtilities.cpp
-  Renderer.cpp
-C:\dev\Diffuse\src\Renderer\Renderer.cpp(82,46): warning C4834: discarding return value of function with 'nodiscard' attribute
-  main.cpp
-  Generating Code...
   Diffuse.vcxproj -> C:\dev\Diffuse\Debug\Diffuse.exe
