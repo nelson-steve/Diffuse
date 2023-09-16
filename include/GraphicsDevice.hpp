@@ -74,10 +74,12 @@ namespace Diffuse {
         VkImage                         m_texture_image;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
+        VkSampler                       m_texture_sampler;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
         VkPipeline                      m_graphics_pipeline;
         VkImageView                     m_depth_image_view;
+        VkImageView                     m_texture_image_view;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;

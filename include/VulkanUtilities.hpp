@@ -58,5 +58,6 @@ namespace Diffuse {
 		static void CopyBufferToImage(VkQueue graphics_queue, VkCommandPool command_pool, VkDevice device, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 		static VkCommandBuffer BeginSingleTimeCommands(VkCommandPool command_pool, VkDevice device);
 		static void EndSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue graphics_queue, VkCommandPool command_pool);
+		static VkImageView CreateImageView(VkDevice device, VkImage image, VkFormat format);
 	};
 }
