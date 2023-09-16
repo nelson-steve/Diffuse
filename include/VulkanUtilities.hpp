@@ -53,5 +53,10 @@ namespace Diffuse {
 		static VkFormat FindDepthFormat(VkPhysicalDevice physical_device);
 		static void CreateImage(uint32_t width, uint32_t height, VkDevice device, VkPhysicalDevice physical_device, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 		static VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device);
+		static void TransitionImageLayout(VkQueue graphics_queue, VkCommandPool command_pool, VkDevice device,
+			VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+		static void CopyBufferToImage(VkQueue graphics_queue, VkCommandPool command_pool, VkDevice device, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+		static VkCommandBuffer BeginSingleTimeCommands(VkCommandPool command_pool, VkDevice device);
+		static void EndSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue graphics_queue, VkCommandPool command_pool);
 	};
 }

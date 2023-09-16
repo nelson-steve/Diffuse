@@ -7,6 +7,7 @@ set (CMAKE_CXX_STANDARD 20)
 set(SOURCES
     src/Application/Application.cpp
     src/Graphics/tiny_obj_loader.cpp
+    src/Graphics/stb_image.cpp
     src/Graphics/GraphicsDevice.cpp
     src/Renderer/Renderer.cpp
     src/Graphics/Window.cpp
@@ -23,6 +24,7 @@ set(HEADERS
     include/VulkanUtilities.hpp
     include/ReadFile.hpp
     dependencies/tiny_obj_loader/tiny_obj_loader.h
+    dependencies/stb_image/stb_image.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -31,6 +33,7 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC 
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/dependencies/tiny_obj_loader
+        ${PROJECT_SOURCE_DIR}/dependencies/stb_image
 )
 
 

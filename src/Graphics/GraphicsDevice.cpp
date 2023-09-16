@@ -1,6 +1,8 @@
 #include "GraphicsDevice.hpp"
 #include "ReadFile.hpp"
 
+#include "stb_image.h"
+
 #include <iostream>
 #include <set>
 
@@ -287,7 +289,7 @@ namespace Diffuse {
             LOG_ERROR(false, "Failed to create render pass!");
         }
 
-        // Create Descriptor Set Layout 
+        // Create Descriptor Set Layout
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorCount = 1;
@@ -438,6 +440,35 @@ namespace Diffuse {
             LOG_ERROR(false, "Failed to create command pool!");
         }
 
+        int texWidth, texHeight, texChannels;
+        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+        if (!pixels) {
+            throw std::runtime_error("failed to load texture image!");
+        }
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        vkUtilities::CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
+
+        void* data;
+        vkMapMemory(m_device, stagingBufferMemory, 0, imageSize, 0, &data);
+        memcpy(data, pixels, static_cast<size_t>(imageSize));
+        vkUnmapMemory(m_device, stagingBufferMemory);
+
+        stbi_image_free(pixels);
+
+        vkUtilities::CreateImage(texWidth, texHeight, m_device, m_physical_device, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory);
+
+        vkUtilities::TransitionImageLayout(m_graphics_queue, m_command_pool, m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        vkUtilities::CopyBufferToImage(m_graphics_queue, m_command_pool, m_device, stagingBuffer, m_texture_image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        vkUtilities::TransitionImageLayout(m_graphics_queue, m_command_pool, m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+
         // Create Depth Resource
 
         VkFormat depthFormat = vkUtilities::FindDepthFormat(m_physical_device);
@@ -563,7 +594,7 @@ namespace Diffuse {
         // SUCCESS
     }
 
-    void GraphicsDevice::LoadModal()
+    void GraphicsDevice::LoadModel()
     {
 
     }
@@ -750,6 +781,9 @@ namespace Diffuse {
         vkDeviceWaitIdle(m_device);
 
         CleanUpSwapchain();
+
+        vkDestroyImage(m_device, m_texture_image, nullptr);
+        vkFreeMemory(m_device, m_texture_image_memory, nullptr);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroyBuffer(m_device, m_uniform_buffers[i], nullptr);
