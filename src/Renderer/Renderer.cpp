@@ -59,10 +59,12 @@ namespace Diffuse {
                     //}
 
                     // Check if `texcoord_index` is zero or positive. negative = no texcoord data
-                    //if (idx.texcoord_index >= 0) {
-                    //    tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                    //    tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
-                    //}
+                    if (idx.texcoord_index >= 0) {
+                        tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+                        tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                        
+                        vertex.tex_coords = { tx, ty };
+                    }
 
                     if (uniqueVertices.count(vertex) == 0) {
                         uniqueVertices[vertex] = static_cast<uint32_t>(m_mesh_data.vertices.size());
