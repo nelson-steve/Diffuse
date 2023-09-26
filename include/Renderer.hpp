@@ -22,13 +22,13 @@ namespace Diffuse {
 		int p_indices_size = 0;
 		VkBuffer p_index_buffer;
 		VkBuffer p_vertex_buffer;
-		VkPipeline p_graphics_pipeline;
+		//VkPipeline p_graphics_pipeline;
 		VkDeviceMemory p_vertex_buffer_memory;
 		VkDeviceMemory p_index_buffer_memory;
-		VkPipelineLayout p_pipeline_layout;
-		VkDescriptorSetLayout p_descriptor_set_layout;
-		VkDescriptorPool p_descriptor_pool;
-		std::vector<VkDescriptorSet> p_descriptor_sets;
+		//VkPipelineLayout p_pipeline_layout;
+		//VkDescriptorSetLayout p_descriptor_set_layout;
+		//VkDescriptorPool p_descriptor_pool;
+		//std::vector<VkDescriptorSet> p_descriptor_sets;
 	private:
 		MeshData m_mesh_data;
 	};

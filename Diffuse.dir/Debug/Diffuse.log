@@ -1,3 +1,2 @@
-﻿  Application.cpp
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+﻿  GraphicsDevice.cpp
   Diffuse.vcxproj -> C:\dev\Diffuse\Debug\Diffuse.exe

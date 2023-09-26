@@ -366,116 +366,6 @@ namespace Diffuse {
         vkUtilities::CreateImage(m_swap_chain_extent.width, m_swap_chain_extent.height, m_device, m_physical_device, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depth_image, m_depth_image_memory);
         m_depth_image_view = vkUtilities::CreateImageView(m_depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, m_device);
 
-        // Create Framebuffers
-        m_swap_chain_framebuffers.resize(m_swap_chain_image_views.size());
-
-        for (size_t i = 0; i < m_swap_chain_image_views.size(); i++) {
-            std::array<VkImageView, 2> attachments = {
-                m_swap_chain_image_views[i],
-                m_depth_image_view
-            };
-
-            VkFramebufferCreateInfo framebuffer_info{};
-            framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebuffer_info.renderPass = m_render_pass;
-            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = m_swap_chain_extent.width;
-            framebuffer_info.height = m_swap_chain_extent.height;
-            framebuffer_info.layers = 1;
-
-            if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create framebuffer!");
-            }
-        }
-
-
-
-        //CreateDescriptorSet();
-
-        // Create Command Buffers
-        m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
-        VkCommandBufferAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.commandPool = m_command_pool;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandBufferCount = (uint32_t)m_command_buffers.size();
-
-        if (vkAllocateCommandBuffers(m_device, &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
-            LOG_ERROR(false, "Failed to allocate command buffers!");
-        }
-
-        // Create Sync Obects
-        m_image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        m_render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        m_in_flight_fences.resize(MAX_FRAMES_IN_FLIGHT);
-
-        VkSemaphoreCreateInfo semaphore_info{};
-        semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        VkFenceCreateInfo fence_info{};
-        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(m_device, &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
-            }
-        }
-
-        //CreateVertexBuffer();
-        //CreateIndexBuffer();
-        // SUCCESS
-    }
-
-    void GraphicsDevice::LoadModel()
-    {
-
-    }
-
-    void GraphicsDevice::CreateVertexBuffer(Mesh& mesh, const std::vector<Vertex> vertices) {
-        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
-
-        void* data;
-        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, vertices.data(), (size_t)bufferSize);
-        vkUnmapMemory(m_device, stagingBufferMemory);
-
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.p_vertex_buffer, mesh.p_vertex_buffer_memory, m_physical_device, m_device);
-
-        vkUtilities::CopyBuffer(stagingBuffer, mesh.p_vertex_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
-
-        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
-        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
-    }
-    void GraphicsDevice::CreateIndexBuffer(Mesh& mesh, const std::vector<uint32_t> indices) {
-        //m_indices_size = indices.size();
-        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
-
-        void* data;
-        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, indices.data(), (size_t)bufferSize);
-        vkUnmapMemory(m_device, stagingBufferMemory);
-
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.p_index_buffer, mesh.p_index_buffer_memory, m_physical_device, m_device);
-
-        vkUtilities::CopyBuffer(stagingBuffer, mesh.p_index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
-
-        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
-        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
-    }
-
-    void GraphicsDevice::CreateDescriptorSet(Mesh& mesh) {
         // Create Descriptor Set Layout
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0;
@@ -497,7 +387,7 @@ namespace Diffuse {
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
         layoutInfo.pBindings = bindings.data();
 
-        if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &mesh.p_descriptor_set_layout) != VK_SUCCESS) {
+        if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create descriptor set layout!");
         }
         // Create Uniform Buffers
@@ -525,21 +415,21 @@ namespace Diffuse {
         poolInfo.pPoolSizes = poolSizes.data();
         poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
-        if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &mesh.p_descriptor_pool) != VK_SUCCESS) {
+        if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create descriptor pool!");
         }
 
         ////////////////////////////////////////////////
 
-        std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, mesh.p_descriptor_set_layout);
+        std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptor_set_layout);
         VkDescriptorSetAllocateInfo set_alloc_info{};
         set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        set_alloc_info.descriptorPool = mesh.p_descriptor_pool;
+        set_alloc_info.descriptorPool = m_descriptor_pool;
         set_alloc_info.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
         set_alloc_info.pSetLayouts = layouts.data();
 
-        mesh.p_descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
-        if (vkAllocateDescriptorSets(m_device, &set_alloc_info, mesh.p_descriptor_sets.data()) != VK_SUCCESS) {
+        m_descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
+        if (vkAllocateDescriptorSets(m_device, &set_alloc_info, m_descriptor_sets.data()) != VK_SUCCESS) {
             LOG_ERROR(false, "failed to allocate descriptor sets!");
         }
 
@@ -557,7 +447,7 @@ namespace Diffuse {
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = mesh.p_descriptor_sets[i];
+            descriptorWrites[0].dstSet = m_descriptor_sets[i];
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -565,7 +455,7 @@ namespace Diffuse {
             descriptorWrites[0].pBufferInfo = &bufferInfo;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = mesh.p_descriptor_sets[i];
+            descriptorWrites[1].dstSet = m_descriptor_sets[i];
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -667,9 +557,9 @@ namespace Diffuse {
         VkPipelineLayoutCreateInfo pipeline_layout_info{};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.setLayoutCount = 1;
-        pipeline_layout_info.pSetLayouts = &mesh.p_descriptor_set_layout;
+        pipeline_layout_info.pSetLayouts = &m_descriptor_set_layout;
 
-        if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &mesh.p_pipeline_layout) != VK_SUCCESS) {
+        if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create pipeline layout!");
         }
 
@@ -685,17 +575,122 @@ namespace Diffuse {
         pipeline_info.pDepthStencilState = &depthStencil;
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.pDynamicState = &dynamic_state;
-        pipeline_info.layout = mesh.p_pipeline_layout;
+        pipeline_info.layout = m_pipeline_layout;
         pipeline_info.renderPass = m_render_pass;
         pipeline_info.subpass = 0;
         pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &mesh.p_graphics_pipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create graphics pipeline!");
         }
 
         vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
         vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
+
+        // Create Framebuffers
+        m_swap_chain_framebuffers.resize(m_swap_chain_image_views.size());
+
+        for (size_t i = 0; i < m_swap_chain_image_views.size(); i++) {
+            std::array<VkImageView, 2> attachments = {
+                m_swap_chain_image_views[i],
+                m_depth_image_view
+            };
+
+            VkFramebufferCreateInfo framebuffer_info{};
+            framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_info.renderPass = m_render_pass;
+            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebuffer_info.pAttachments = attachments.data();
+            framebuffer_info.width = m_swap_chain_extent.width;
+            framebuffer_info.height = m_swap_chain_extent.height;
+            framebuffer_info.layers = 1;
+
+            if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_swap_chain_framebuffers[i]) != VK_SUCCESS) {
+                LOG_ERROR(false, "Failed to create framebuffer!");
+            }
+        }
+
+        // Create Command Buffers
+        m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+        VkCommandBufferAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.commandPool = m_command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = (uint32_t)m_command_buffers.size();
+
+        if (vkAllocateCommandBuffers(m_device, &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
+            LOG_ERROR(false, "Failed to allocate command buffers!");
+        }
+
+        // Create Sync Obects
+        m_image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        m_render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        m_in_flight_fences.resize(MAX_FRAMES_IN_FLIGHT);
+
+        VkSemaphoreCreateInfo semaphore_info{};
+        semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fence_info{};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphores[i]) != VK_SUCCESS ||
+                vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(m_device, &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS) {
+                LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
+            }
+        }
+        // SUCCESS
+    }
+
+    void GraphicsDevice::LoadModel()
+    {
+
+    }
+
+    void GraphicsDevice::CreateVertexBuffer(Mesh& mesh, const std::vector<Vertex> vertices) {
+        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
+
+        void* data;
+        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, vertices.data(), (size_t)bufferSize);
+        vkUnmapMemory(m_device, stagingBufferMemory);
+
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.p_vertex_buffer, mesh.p_vertex_buffer_memory, m_physical_device, m_device);
+
+        vkUtilities::CopyBuffer(stagingBuffer, mesh.p_vertex_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+
+        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+    }
+    void GraphicsDevice::CreateIndexBuffer(Mesh& mesh, const std::vector<uint32_t> indices) {
+        //m_indices_size = indices.size();
+        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory, m_physical_device, m_device);
+
+        void* data;
+        vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, indices.data(), (size_t)bufferSize);
+        vkUnmapMemory(m_device, stagingBufferMemory);
+
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.p_index_buffer, mesh.p_index_buffer_memory, m_physical_device, m_device);
+
+        vkUtilities::CopyBuffer(stagingBuffer, mesh.p_index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+
+        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+    }
+
+    void GraphicsDevice::CreateDescriptorSet(Mesh& mesh) {
+
     }
 
     void GraphicsDevice::Draw(const std::vector<Mesh>& meshes) {
@@ -718,7 +713,7 @@ namespace Diffuse {
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
         vkUtilities::RecordCommandBuffer(meshes, m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, 
-            nullptr, nullptr, nullptr, 0, nullptr, {0}, m_current_frame);
+            m_graphics_pipeline, nullptr, nullptr, 0, m_pipeline_layout, m_descriptor_sets, m_current_frame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -851,15 +846,15 @@ namespace Diffuse {
             vkFreeMemory(m_device, m_uniform_buffers_memory[i], nullptr);
         }
 
-        //vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
-        //vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
+        vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
         //vkDestroyBuffer(m_device, m_index_buffer, nullptr);
         //vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
         
         //vkDestroyBuffer(m_device, m_vertex_buffer, nullptr);
         //vkFreeMemory(m_device, m_vertex_buffer_memory, nullptr);
-        //vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
-        //vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+        vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
+        vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
         vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {

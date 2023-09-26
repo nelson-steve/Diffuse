@@ -226,20 +226,20 @@ namespace Diffuse {
 		scissor.extent = swap_chain_extent;
 		vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 		//
-		//{
-		//	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshes[0].p_graphics_pipeline);
-		//	VkBuffer vertexBuffers[] = { meshes[0].p_vertex_buffer };
-		//	VkDeviceSize offsets[] = { 0 };
-		//	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshes[0].p_pipeline_layout, 0, 1, &meshes[0].p_descriptor_sets[current_frame], 0, nullptr);
-		//
-		//	vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-		//	vkCmdBindIndexBuffer(command_buffer, meshes[0].p_index_buffer, 0, VK_INDEX_TYPE_UINT32);
-		//	vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(meshes[0].p_indices_size), 1, 0, 0, 0);
-		//}
+		{
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+			VkBuffer vertexBuffers[] = { meshes[0].p_vertex_buffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
+		
+			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+			vkCmdBindIndexBuffer(command_buffer, meshes[0].p_index_buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(meshes[0].p_indices_size), 1, 0, 0, 0);
+		}
 
 		{
-			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshes[1].p_graphics_pipeline);
-			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshes[1].p_pipeline_layout, 0, 1, &meshes[1].p_descriptor_sets[current_frame], 0, nullptr);
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
 			VkBuffer vertexBuffers[] = { meshes[1].p_vertex_buffer };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
