@@ -91,18 +91,26 @@ namespace Diffuse {
         device = graphics_device;
 	}
 
-	void Renderer::RenderMesh(const Mesh& mesh) {
-        if (!mesh.is_initialized) {
-            device->CreateVertexBuffer(mesh.GetMeshData().vertices);
-            device->CreateIndexBuffer(mesh.GetMeshData().indices);
-
-            mesh.is_initialized = true;
-        }
-
-        device->Draw();
+	void Renderer::RenderMesh(Mesh& mesh) {
+        //device->Draw(mesh);
 	}
 
-	void Renderer::RenderMeshes(const std::vector<Mesh>& meshes) {
+	void Renderer::RenderMeshes(std::vector<Mesh*> meshes) {
 
+        for (auto& mesh : meshes) {
+            if (!mesh->is_initialized) {
+                device->CreateDescriptorSet(*mesh);
+                device->CreateVertexBuffer(*mesh, mesh->GetMeshData().vertices);
+                mesh->p_indices_size = mesh->GetMeshData().indices.size();
+                device->CreateIndexBuffer(*mesh, mesh->GetMeshData().indices);
+
+                mesh->is_initialized = true;
+            }
+        }
+        std::vector<Mesh> _meshes;
+        for (auto& mesh : meshes) {
+            _meshes.push_back(*mesh);
+        }
+        device->Draw(_meshes);
 	}
 }

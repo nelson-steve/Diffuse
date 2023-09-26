@@ -12,6 +12,9 @@
 #include <vector>
 
 namespace Diffuse {
+
+    class Mesh;
+
     struct Config {
         bool enable_validation_layers = false;
         const std::vector<const char*> validation_layers = {
@@ -75,40 +78,40 @@ namespace Diffuse {
         VkDevice                        m_device;
         VkFormat                        m_swap_chain_image_format;
         VkQueue                         m_present_queue;
-        VkBuffer                        m_index_buffer;
-        VkBuffer                        m_vertex_buffer;
+        //VkBuffer                        m_index_buffer;
+        //VkBuffer                        m_vertex_buffer;
         VkImage                         m_texture_image;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
         VkSampler                       m_texture_sampler;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
-        VkPipeline                      m_graphics_pipeline;
+        //VkPipeline                      m_graphics_pipeline;
         VkImageView                     m_depth_image_view;
         VkImageView                     m_texture_image_view;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;
         VkDeviceMemory                  m_texture_image_memory;
-        VkDeviceMemory                  m_index_buffer_memory;
+        //VkDeviceMemory                  m_index_buffer_memory;
         VkDeviceMemory                  m_depth_image_memory;
         VkSwapchainKHR                  m_swap_chain;
-        VkDeviceMemory                  m_vertex_buffer_memory;
-        VkDescriptorPool                m_descriptor_pool;
-        VkPipelineLayout                m_pipeline_layout;
+        //VkDeviceMemory                  m_vertex_buffer_memory;
+        //VkDescriptorPool                m_descriptor_pool;
+        //VkPipelineLayout                m_pipeline_layout;
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            m_in_flight_fences;
         std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
-        VkDescriptorSetLayout           m_descriptor_set_layout;
+        //VkDescriptorSetLayout           m_descriptor_set_layout;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
         std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
-        std::vector<VkDescriptorSet>    m_descriptor_sets;
+        //std::vector<VkDescriptorSet>    m_descriptor_sets;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
@@ -116,11 +119,12 @@ namespace Diffuse {
         GraphicsDevice(Config config = {});
 
         // TODO: Think of a better place to put Draw function. Hint: Renderer class
-        void Draw();
+        void Draw(const std::vector<Mesh>& meshes);
 
         void LoadModel();
-        void CreateVertexBuffer(const std::vector<Vertex> vertices);
-        void CreateIndexBuffer(const std::vector<uint32_t> vertices);
+        void CreateVertexBuffer(Mesh& mesh, const std::vector<Vertex> vertices);
+        void CreateIndexBuffer(Mesh& mesh, const std::vector<uint32_t> vertices);
+        void CreateDescriptorSet(Mesh& mesh);
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
@@ -128,7 +132,7 @@ namespace Diffuse {
         void CleanUpSwapchain();
 
         std::shared_ptr<Window> GetWindow() const { return m_window; }
-        int m_indices_size;
+        //int m_indices_size;
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 2;

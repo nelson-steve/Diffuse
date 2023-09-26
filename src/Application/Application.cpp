@@ -4,15 +4,14 @@
 
 #include <iostream>
 
-
-
 namespace Diffuse {
 
     static Renderer* renderer;
-    static Mesh* mesh;
+    static std::vector<Mesh*> meshes;
 
     void Application::Init() {
-        mesh = new Mesh("assets/suzanne.obj");
+        meshes.push_back(new Mesh("assets/suzanne.obj"));
+        meshes.push_back(new Mesh("assets/cone.obj"));
         m_graphics = new GraphicsDevice();
         renderer = new Renderer(m_graphics);
 
@@ -27,14 +26,16 @@ namespace Diffuse {
     {
         while (!m_graphics->GetWindow()->WindowShouldClose()) {
             m_graphics->GetWindow()->PollEvents();
-            renderer->RenderMesh(*mesh);
+            renderer->RenderMeshes(meshes);
             //m_graphics->Draw();
         }
     }
     void Application::Destroy()
     {
         delete renderer;
-        delete mesh;
+        for (auto& mesh : meshes) {
+            delete mesh;
+        }
         m_graphics->CleanUp();
         delete m_graphics;
     }
