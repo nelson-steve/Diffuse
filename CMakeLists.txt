@@ -6,7 +6,6 @@ set (CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
     src/Application/Application.cpp
-    src/Graphics/tiny_obj_loader.cpp
     src/Graphics/tiny_gltf.cpp
     src/Graphics/GraphicsDevice.cpp
     src/Renderer/Model.cpp
@@ -27,7 +26,6 @@ set(HEADERS
     include/ReadFile.hpp
     dependencies/tiny_gltf/json.hpp
     dependencies/tiny_gltf/tiny_gltf.h
-    dependencies/tiny_obj_loader/tiny_obj_loader.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -35,7 +33,6 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 target_include_directories(${PROJECT_NAME}
     PUBLIC 
         ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/dependencies/tiny_obj_loader
         ${PROJECT_SOURCE_DIR}/dependencies/tiny_gltf
 )
 
