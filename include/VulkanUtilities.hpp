@@ -7,6 +7,7 @@
 
 namespace Diffuse {
 
+	class Model;
 	class Mesh;
 	struct Vertex;
 	
@@ -38,7 +39,7 @@ namespace Diffuse {
 		static VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 		static VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* m_window);
 		static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
-		static void RecordCommandBuffer(const std::vector<Mesh>& meshes, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
+		static void RecordCommandBuffer(Model* model, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
 			std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer, VkBuffer index_buffer, int indices_size,
 			VkPipelineLayout pipeline_layout, std::vector<VkDescriptorSet> descriptor_sets, int current_frame);
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);

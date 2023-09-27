@@ -1,6 +1,7 @@
 #include "VulkanUtilities.hpp"
 #include "Application.hpp"
 #include "Renderer.hpp"
+#include "Model.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -186,7 +187,7 @@ namespace Diffuse {
 		return shaderModule;
 	}
 
-	void vkUtilities::RecordCommandBuffer(const std::vector<Mesh>& meshes, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
+	void vkUtilities::RecordCommandBuffer(Model* model, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
 		std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer, VkBuffer index_buffer, int indices_size, 
 		VkPipelineLayout pipeline_layout, std::vector<VkDescriptorSet> descriptor_sets, int current_frame) {
 		VkCommandBufferBeginInfo beginInfo{};
@@ -227,24 +228,34 @@ namespace Diffuse {
 		vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 		//
 		{
-			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-			VkBuffer vertexBuffers[] = { meshes[0].p_vertex_buffer };
-			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
-		
-			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(command_buffer, meshes[0].p_index_buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(meshes[0].p_indices_size), 1, 0, 0, 0);
+			//vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+			//VkBuffer vertexBuffers[] = { meshes[0].p_vertex_buffer };
+			//VkDeviceSize offsets[] = { 0 };
+			//vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
+			//
+			//vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+			//vkCmdBindIndexBuffer(command_buffer, meshes[0].p_index_buffer, 0, VK_INDEX_TYPE_UINT32);
+			//vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(meshes[0].p_indices_size), 1, 0, 0, 0);
+		}
+
+		{
+			//vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+			//vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
+			//VkBuffer vertexBuffers[] = { meshes[1].p_vertex_buffer };
+			//VkDeviceSize offsets[] = { 0 };
+			//vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+			//vkCmdBindIndexBuffer(command_buffer, meshes[1].p_index_buffer, 0, VK_INDEX_TYPE_UINT32);
+			//vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(meshes[1].p_indices_size), 1, 0, 0, 0);
 		}
 
 		{
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[current_frame], 0, nullptr);
-			VkBuffer vertexBuffers[] = { meshes[1].p_vertex_buffer };
+			VkBuffer vertexBuffers[] = { model->p_vertices.buffer };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(command_buffer, meshes[1].p_index_buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(meshes[1].p_indices_size), 1, 0, 0, 0);
+			vkCmdBindIndexBuffer(command_buffer, model->p_indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(model->p_indices_size), 1, 0, 0, 0);
 		}
 
 		//vkCmdDraw(command_buffer, indices_size, 1, 0, 0);
@@ -337,7 +348,8 @@ namespace Diffuse {
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0), glm::vec3(20.0));
+		//ubo.model = glm::scale(glm::mat4(1.0), glm::vec3(10.0));
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.proj = glm::perspective(glm::radians(45.0f), swap_chain_extent.width / (float)swap_chain_extent.height, 0.1f, 10.0f);
 		ubo.proj[1][1] *= -1;

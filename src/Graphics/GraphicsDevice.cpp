@@ -1,8 +1,10 @@
 #include "GraphicsDevice.hpp"
 #include "ReadFile.hpp"
 #include "Renderer.hpp"
+#include "Model.hpp"
 
 #include "stb_image.h"
+#include "tiny_gltf.h"
 
 #include <iostream>
 #include <set>
@@ -305,7 +307,7 @@ namespace Diffuse {
 
         // Create Texture Image
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("assets/damaged_helmet/Default_albedo.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load("../assets/damaged_helmet/Default_albedo.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels) {
@@ -466,8 +468,8 @@ namespace Diffuse {
         }
 
         // Create Graphics Pipeline
-        auto vert_shader_code = Utils::File::ReadFile("shaders/vert.spv");
-        auto frag_shader_code = Utils::File::ReadFile("shaders/frag.spv");
+        auto vert_shader_code = Utils::File::ReadFile("../shaders/vert.spv");
+        auto frag_shader_code = Utils::File::ReadFile("../shaders/frag.spv");
 
         VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
         VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
@@ -649,7 +651,7 @@ namespace Diffuse {
 
     }
 
-    void GraphicsDevice::CreateVertexBuffer(Mesh& mesh, const std::vector<Vertex> vertices) {
+    void GraphicsDevice::CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices) {
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
         VkBuffer stagingBuffer;
@@ -661,14 +663,14 @@ namespace Diffuse {
         memcpy(data, vertices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.p_vertex_buffer, mesh.p_vertex_buffer_memory, m_physical_device, m_device);
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer, vertex_buffer_memory, m_physical_device, m_device);
 
-        vkUtilities::CopyBuffer(stagingBuffer, mesh.p_vertex_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+        vkUtilities::CopyBuffer(stagingBuffer, vertex_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
 
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
-    void GraphicsDevice::CreateIndexBuffer(Mesh& mesh, const std::vector<uint32_t> indices) {
+    void GraphicsDevice::CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> indices) {
         //m_indices_size = indices.size();
         VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -681,9 +683,9 @@ namespace Diffuse {
         memcpy(data, indices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
-        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.p_index_buffer, mesh.p_index_buffer_memory, m_physical_device, m_device);
+        vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer, index_buffer_memory, m_physical_device, m_device);
 
-        vkUtilities::CopyBuffer(stagingBuffer, mesh.p_index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
+        vkUtilities::CopyBuffer(stagingBuffer, index_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
 
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
@@ -693,7 +695,7 @@ namespace Diffuse {
 
     }
 
-    void GraphicsDevice::Draw(const std::vector<Mesh>& meshes) {
+    void GraphicsDevice::Draw(Model* model) {
         vkWaitForFences(m_device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -712,7 +714,7 @@ namespace Diffuse {
         vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
-        vkUtilities::RecordCommandBuffer(meshes, m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, 
+        vkUtilities::RecordCommandBuffer(model, m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_swap_chain_framebuffers, 
             m_graphics_pipeline, nullptr, nullptr, 0, m_pipeline_layout, m_descriptor_sets, m_current_frame);
 
         VkSubmitInfo submitInfo{};

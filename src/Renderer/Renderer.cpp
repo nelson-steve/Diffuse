@@ -1,12 +1,14 @@
 #include "Renderer.hpp"
 
+#include "tiny_gltf.h"
 #include "tiny_obj_loader.h"
 #include <iostream>
 #include <unordered_map>
 
 namespace Diffuse {
-	Mesh::Mesh(const std::string& path) {
-		// loading a model
+    Mesh::Mesh(const std::string& path) {
+#if 0
+        // loading a model
         std::string inputfile = path;
         tinyobj::ObjReaderConfig reader_config;
         reader_config.mtl_search_path = "assets/"; // Path to material files
@@ -85,14 +87,15 @@ namespace Diffuse {
             }
         }
         std::cout << "Done loading model: " << path << std::endl;
+#endif
 	}
 
 	Renderer::Renderer(GraphicsDevice* graphics_device) {
         device = graphics_device;
 	}
 
-	void Renderer::RenderMesh(Mesh& mesh) {
-        //device->Draw(mesh);
+	void Renderer::RenderMesh(Model* model) {
+        device->Draw(model);
 	}
 
 	void Renderer::RenderMeshes(std::vector<Mesh*> meshes) {
@@ -100,9 +103,9 @@ namespace Diffuse {
         for (auto& mesh : meshes) {
             if (!mesh->is_initialized) {
                 device->CreateDescriptorSet(*mesh);
-                device->CreateVertexBuffer(*mesh, mesh->GetMeshData().vertices);
-                mesh->p_indices_size = mesh->GetMeshData().indices.size();
-                device->CreateIndexBuffer(*mesh, mesh->GetMeshData().indices);
+                //device->CreateVertexBuffer(*mesh, mesh->GetMeshData().vertices);
+                //mesh->p_indices_size = mesh->GetMeshData().indices.size();
+                //device->CreateIndexBuffer(*mesh, mesh->GetMeshData().indices);
 
                 mesh->is_initialized = true;
             }
@@ -111,6 +114,6 @@ namespace Diffuse {
         for (auto& mesh : meshes) {
             _meshes.push_back(*mesh);
         }
-        device->Draw(_meshes);
+        //device->Draw(_meshes);
 	}
 }

@@ -31,8 +31,9 @@ namespace Diffuse {
     };
     struct Vertex {
         glm::vec3 pos;
-        glm::vec3 color;
+        glm::vec3 normal;
         glm::vec2 tex_coords;
+        glm::vec3 color;
 
         static VkVertexInputBindingDescription getBindingDescription() {
             VkVertexInputBindingDescription bindingDescription{};
@@ -43,8 +44,8 @@ namespace Diffuse {
             return bindingDescription;
         }
 
-        static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-            std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+        static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+            std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
@@ -61,11 +62,20 @@ namespace Diffuse {
             attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
             attributeDescriptions[2].offset = offsetof(Vertex, tex_coords);
 
+            attributeDescriptions[3].binding = 0;
+            attributeDescriptions[3].location = 3;
+            attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+            attributeDescriptions[3].offset = offsetof(Vertex, color);
+
             return attributeDescriptions;
         }
 
         bool operator==(const Vertex& other) const {
-            return pos == other.pos && color == other.color;
+            return 
+                pos         == other.pos        &&
+                color       == other.color      &&
+                tex_coords  == other.tex_coords &&
+                normal      == other.normal;
         }
     };
 
@@ -119,11 +129,11 @@ namespace Diffuse {
         GraphicsDevice(Config config = {});
 
         // TODO: Think of a better place to put Draw function. Hint: Renderer class
-        void Draw(const std::vector<Mesh>& meshes);
+        void Draw(Model* model);
 
         void LoadModel();
-        void CreateVertexBuffer(Mesh& mesh, const std::vector<Vertex> vertices);
-        void CreateIndexBuffer(Mesh& mesh, const std::vector<uint32_t> vertices);
+        void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
+        void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
         void CreateDescriptorSet(Mesh& mesh);
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
@@ -136,6 +146,8 @@ namespace Diffuse {
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 2;
+
+        friend class Model;
     };
 }
 

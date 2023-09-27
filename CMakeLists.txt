@@ -7,8 +7,9 @@ set (CMAKE_CXX_STANDARD 20)
 set(SOURCES
     src/Application/Application.cpp
     src/Graphics/tiny_obj_loader.cpp
-    src/Graphics/stb_image.cpp
+    src/Graphics/tiny_gltf.cpp
     src/Graphics/GraphicsDevice.cpp
+    src/Renderer/Model.cpp
     src/Renderer/Renderer.cpp
     src/Graphics/Window.cpp
     src/Graphics/VulkanUtilities.cpp
@@ -18,13 +19,15 @@ set(SOURCES
 
 set(HEADERS
     include/Application.hpp
+    include/Model.hpp
     include/GraphicsDevice.hpp
     include/Renderer.hpp
     include/Window.hpp
     include/VulkanUtilities.hpp
     include/ReadFile.hpp
+    dependencies/tiny_gltf/json.hpp
+    dependencies/tiny_gltf/tiny_gltf.h
     dependencies/tiny_obj_loader/tiny_obj_loader.h
-    dependencies/stb_image/stb_image.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -33,7 +36,7 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC 
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/dependencies/tiny_obj_loader
-        ${PROJECT_SOURCE_DIR}/dependencies/stb_image
+        ${PROJECT_SOURCE_DIR}/dependencies/tiny_gltf
 )
 
 

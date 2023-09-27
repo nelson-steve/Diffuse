@@ -38,7 +38,7 @@ namespace Diffuse {
 		Renderer(GraphicsDevice* graphics_device);
 		Renderer() = delete;
 
-		void RenderMesh(Mesh& mesh);
+		void RenderMesh(Model* model);
 		void RenderMeshes(std::vector<Mesh*> meshes);
 	private:
 		GraphicsDevice* device;
