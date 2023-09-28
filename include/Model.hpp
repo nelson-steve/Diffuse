@@ -1,6 +1,7 @@
 #include "tiny_gltf.h"
 
 #include "GraphicsDevice.hpp"
+#include "Texture2D.hpp"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -54,10 +55,9 @@ namespace Diffuse {
 		};
 
 		struct Image {
-			// TODO: Create Texture class
-			//vks::Texture2D texture;
+			Texture2D* texture;
 			// We also store (and create) a descriptor set that's used to access this texture from the fragment shader
-			//VkDescriptorSet descriptorSet;
+			VkDescriptorSet descriptorSet;
 		};
 
 		// A glTF texture stores a reference to the image and a sampler
@@ -67,6 +67,7 @@ namespace Diffuse {
 		};
 
 		std::vector<Image> images;
+		Image image;
 		std::vector<Texture> textures;
 		std::vector<Material> materials;
 		std::vector<Node*> nodes;

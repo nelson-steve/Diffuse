@@ -16,7 +16,7 @@ namespace Diffuse {
         //meshes.push_back(new Mesh("assets/cone.obj"));
         m_graphics = new GraphicsDevice();
         model = new Model("../assets/Avocado/Avocado.gltf", m_graphics);
-
+        m_graphics->CreateDescriptorSet(*model);
         renderer = new Renderer(m_graphics);
 
         //if (m_graphics->Init(m_config)) {
@@ -30,7 +30,7 @@ namespace Diffuse {
     {
         while (!m_graphics->GetWindow()->WindowShouldClose()) {
             m_graphics->GetWindow()->PollEvents();
-            renderer->RenderMesh(model);
+            renderer->RenderModel(model);
             //renderer->RenderMeshes(meshes);
             //m_graphics->Draw();
         }

@@ -9,6 +9,7 @@ set(SOURCES
     src/Graphics/tiny_gltf.cpp
     src/Graphics/GraphicsDevice.cpp
     src/Renderer/Model.cpp
+    src/Renderer/Texture2D.cpp
     src/Renderer/Renderer.cpp
     src/Graphics/Window.cpp
     src/Graphics/VulkanUtilities.cpp
@@ -19,6 +20,7 @@ set(SOURCES
 set(HEADERS
     include/Application.hpp
     include/Model.hpp
+    include/Texture2D.hpp
     include/GraphicsDevice.hpp
     include/Renderer.hpp
     include/Window.hpp

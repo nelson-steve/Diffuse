@@ -90,19 +90,19 @@ namespace Diffuse {
         VkQueue                         m_present_queue;
         //VkBuffer                        m_index_buffer;
         //VkBuffer                        m_vertex_buffer;
-        VkImage                         m_texture_image;
+        //VkImage                         m_texture_image;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
-        VkSampler                       m_texture_sampler;
+        //VkSampler                       m_texture_sampler;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
         VkPipeline                      m_graphics_pipeline;
         VkImageView                     m_depth_image_view;
-        VkImageView                     m_texture_image_view;
+        //VkImageView                     m_texture_image_view;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;
-        VkDeviceMemory                  m_texture_image_memory;
+        //VkDeviceMemory                  m_texture_image_memory;
         VkDeviceMemory                  m_index_buffer_memory;
         VkDeviceMemory                  m_depth_image_memory;
         VkSwapchainKHR                  m_swap_chain;
@@ -132,9 +132,10 @@ namespace Diffuse {
         void Draw(Model* model);
 
         void LoadModel();
+        void CreateTexture(const std::string& path);
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
-        void CreateDescriptorSet(Mesh& mesh);
+        void CreateDescriptorSet(const Model& model);
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
@@ -148,6 +149,7 @@ namespace Diffuse {
         const int MAX_FRAMES_IN_FLIGHT = 2;
 
         friend class Model;
+        friend class Texture2D;
     };
 }
 

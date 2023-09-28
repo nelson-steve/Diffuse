@@ -78,6 +78,8 @@ namespace Diffuse {
 			vkDestroyBuffer(m_graphics_device->m_device, stagingBuffer, nullptr);
 			vkFreeMemory(m_graphics_device->m_device, stagingBufferMemory, nullptr);
 		}
+
+		image.texture = new Texture2D("../assets/Avocado/Avocado_baseColor.png", m_graphics_device);
 	}
 
 	Model::~Model()
@@ -120,7 +122,7 @@ namespace Diffuse {
 				bufferSize = glTFImage.image.size();
 			}
 			// Load texture from image buffer
-			//images[i].texture.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, vulkanDevice, copyQueue);
+			//images[i].texture = new Texture2D(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, m_graphics_device->m_device, copyQueue);
 			if (deleteBuffer) {
 				delete[] buffer;
 			}

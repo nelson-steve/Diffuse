@@ -1,7 +1,6 @@
 #include "Renderer.hpp"
 
 #include "tiny_gltf.h"
-#include "tiny_obj_loader.h"
 #include <iostream>
 #include <unordered_map>
 
