@@ -610,8 +610,8 @@ namespace Diffuse {
 
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = model.image.texture->m_texture_image_view;
-            imageInfo.sampler = model.image.texture->m_texture_sampler;
+            imageInfo.imageView = model.images[0].texture->m_texture_image_view;
+            imageInfo.sampler = model.images[0].texture->m_texture_sampler;
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 

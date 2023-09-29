@@ -67,7 +67,6 @@ namespace Diffuse {
 		};
 
 		std::vector<Image> images;
-		Image image;
 		std::vector<Texture> textures;
 		std::vector<Material> materials;
 		std::vector<Node*> nodes;
