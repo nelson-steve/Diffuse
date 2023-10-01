@@ -115,13 +115,15 @@ namespace Diffuse {
         std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDescriptorSetLayout           m_descriptor_set_layout;
+        VkDescriptorSetLayout           m_textures_descriptor_set_layout;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
         std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
-        std::vector<VkDescriptorSet>    m_descriptor_sets;
+        VkDescriptorSet                 m_descriptor_set_ubo;
+        std::vector<VkDescriptorSet>    m_descriptor_sets_textures;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
@@ -135,7 +137,8 @@ namespace Diffuse {
         void CreateTexture(const std::string& path);
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
-        void CreateDescriptorSet(const Model& model);
+        void CreateDescriptorSet(Model& model);
+        void CreateGraphicsPipeline();
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
@@ -146,7 +149,7 @@ namespace Diffuse {
         //int m_indices_size;
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
-        const int MAX_FRAMES_IN_FLIGHT = 2;
+        const int MAX_FRAMES_IN_FLIGHT = 1;
 
         friend class Model;
         friend class Texture2D;

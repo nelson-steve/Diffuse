@@ -1,6 +1,7 @@
+#pragma once
+
 #include "tiny_gltf.h"
 
-#include "GraphicsDevice.hpp"
 #include "Texture2D.hpp"
 
 #include "glm/glm.hpp"
@@ -11,6 +12,7 @@
 namespace Diffuse {
 
 	struct Vertex;
+	class GraphicsDevice;
 
 	class Model {
 	public:

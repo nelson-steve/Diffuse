@@ -1,5 +1,7 @@
 #include "Model.hpp"
 
+#include "GraphicsDevice.hpp"
+
 namespace Diffuse {
 	Model::Model(const std::string& path, GraphicsDevice* graphics_device) {
 		m_graphics_device = graphics_device;
@@ -25,6 +27,9 @@ namespace Diffuse {
 		std::vector<uint32_t> indexBuffer;
 		std::vector<Vertex> vertexBuffer;
 
+		LoadImages(model);
+		LoadMaterials(model);
+		LoadTextures(model);
 		tinygltf::Scene scene = model.scenes[model.defaultScene];
 		int size = scene.nodes.size();
 		for (size_t i = 0; i < scene.nodes.size(); i++) {
@@ -78,9 +83,6 @@ namespace Diffuse {
 			vkDestroyBuffer(m_graphics_device->m_device, stagingBuffer, nullptr);
 			vkFreeMemory(m_graphics_device->m_device, stagingBufferMemory, nullptr);
 		}
-
-		LoadImages(model);
-		//image.texture = new Texture2D("../assets/Avocado/Avocado_baseColor.png", m_graphics_device);
 	}
 
 	Model::~Model()

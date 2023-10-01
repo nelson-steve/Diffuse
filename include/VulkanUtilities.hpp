@@ -5,10 +5,10 @@
 #include <vulkan/vulkan.hpp>
 #include <optional>
 
+#include "Model.hpp"
+
 namespace Diffuse {
 
-	class Model;
-	class Mesh;
 	struct Vertex;
 	
 	struct QueueFamilyIndices {
@@ -41,7 +41,7 @@ namespace Diffuse {
 		static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
 		static void RecordCommandBuffer(Model* model, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
 			std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer, VkBuffer index_buffer, int indices_size,
-			VkPipelineLayout pipeline_layout, std::vector<VkDescriptorSet> descriptor_sets, int current_frame);
+			VkPipelineLayout pipeline_layout, VkDescriptorSet descriptor_set, int current_frame);
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physical_device);
@@ -61,5 +61,6 @@ namespace Diffuse {
 		static VkCommandBuffer BeginSingleTimeCommands(VkCommandPool command_pool, VkDevice device);
 		static void EndSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue graphics_queue, VkCommandPool command_pool);
 		static VkImageView CreateImageView(VkDevice device, VkImage image, VkFormat format);
+		static void DrawNode(Model* model, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, Model::Node* node);
 	};
 }
