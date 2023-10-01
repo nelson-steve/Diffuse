@@ -12,9 +12,6 @@
 #include <vector>
 
 namespace Diffuse {
-
-    class Mesh;
-
     struct Config {
         bool enable_validation_layers = false;
         const std::vector<const char*> validation_layers = {
@@ -130,7 +127,7 @@ namespace Diffuse {
         GraphicsDevice(Config config = {});
 
         // TODO: Think of a better place to put Draw function. Hint: Renderer class
-        void Draw(Model* model);
+        void Draw(Camera* camera, Model* model);
 
         void LoadModel();
         void CreateTexture(const std::string& path);

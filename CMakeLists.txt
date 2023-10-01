@@ -11,6 +11,7 @@ set(SOURCES
     src/Renderer/Model.cpp
     src/Renderer/Texture2D.cpp
     src/Renderer/Renderer.cpp
+    src/Renderer/Camera.cpp
     src/Graphics/Window.cpp
     src/Graphics/VulkanUtilities.cpp
     src/Utils/ReadFile.cpp
@@ -23,6 +24,7 @@ set(HEADERS
     include/Texture2D.hpp
     include/GraphicsDevice.hpp
     include/Renderer.hpp
+    include/Camera.hpp
     include/Window.hpp
     include/VulkanUtilities.hpp
     include/ReadFile.hpp

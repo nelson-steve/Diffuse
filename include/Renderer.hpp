@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GraphicsDevice.hpp"
+#include "Camera.hpp"
 
 namespace Diffuse {
 	class Renderer {
@@ -8,7 +9,7 @@ namespace Diffuse {
 		Renderer(GraphicsDevice* graphics_device);
 		Renderer() = delete;
 
-		void RenderModel(Model* model);
+		void RenderModel(Camera* camera, float dt, Model* model);
 	private:
 		GraphicsDevice* device;
 	};

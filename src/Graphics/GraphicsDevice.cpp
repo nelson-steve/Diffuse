@@ -642,7 +642,7 @@ namespace Diffuse {
         vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
     }
 
-    void GraphicsDevice::Draw(Model* model) {
+    void GraphicsDevice::Draw(Camera* camera, Model* model) {
         vkWaitForFences(m_device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -656,7 +656,7 @@ namespace Diffuse {
             LOG_ERROR(false, "Failed to acquire swap chain image!");
         }
 
-        vkUtilities::UpdateUniformBuffers(m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
+        vkUtilities::UpdateUniformBuffers(camera, m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
 
         vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 

@@ -9,7 +9,7 @@ namespace Diffuse {
         device = graphics_device;
 	}
 
-	void Renderer::RenderModel(Model* model) {
-        device->Draw(model);
+	void Renderer::RenderModel(Camera* camera, float dt, Model* model) {
+        device->Draw(camera, model);
 	}
 }
