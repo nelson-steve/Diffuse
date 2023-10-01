@@ -55,7 +55,7 @@ namespace Diffuse {
             attributeDescriptions[1].binding = 0;
             attributeDescriptions[1].location = 1;
             attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescriptions[1].offset = offsetof(Vertex, color);
+            attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
             attributeDescriptions[2].binding = 0;
             attributeDescriptions[2].location = 2;
@@ -73,9 +73,9 @@ namespace Diffuse {
         bool operator==(const Vertex& other) const {
             return 
                 pos         == other.pos        &&
-                color       == other.color      &&
+                normal      == other.normal     &&
                 tex_coords  == other.tex_coords &&
-                normal      == other.normal;
+                color       == other.color;
         }
     };
 
@@ -115,15 +115,14 @@ namespace Diffuse {
         std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDescriptorSetLayout           m_descriptor_set_layout;
-        VkDescriptorSetLayout           m_textures_descriptor_set_layout;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
         std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
-        VkDescriptorSet                 m_descriptor_set_ubo;
-        std::vector<VkDescriptorSet>    m_descriptor_sets_textures;
+        //VkDescriptorSet                 m_descriptor_set;
+        //std::vector<VkDescriptorSet>    m_descriptor_sets_textures;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
@@ -153,13 +152,5 @@ namespace Diffuse {
 
         friend class Model;
         friend class Texture2D;
-    };
-}
-
-namespace std {
-    template<> struct hash<Diffuse::Vertex> {
-        size_t operator()(Diffuse::Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.tex_coords) << 1);
-        }
     };
 }

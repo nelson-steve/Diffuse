@@ -120,8 +120,5 @@ namespace Diffuse {
         if (vkCreateSampler(m_graphics_device->m_device, &samplerInfo, nullptr, &m_texture_sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
-
-		// Update descriptor image info member that can be used for setting up descriptor sets
-		//updateDescriptor();
     }
 }
