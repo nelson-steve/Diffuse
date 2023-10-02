@@ -36,5 +36,6 @@ namespace Diffuse {
 		float m_fov;
 		float m_near;
 		float m_far;
+		bool m_is_update = true;
 	};
 }
