@@ -111,14 +111,15 @@ namespace Diffuse {
         std::vector<VkFence>            m_in_flight_fences;
         std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
-        VkDescriptorSetLayout           m_descriptor_set_layout;
+        VkDescriptorSetLayout           m_descriptor_set_layout_ubo;
+        VkDescriptorSetLayout           m_descriptor_set_layout_textures;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
         std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
-        //VkDescriptorSet                 m_descriptor_set;
+        VkDescriptorSet                 m_descriptor_set;
         //std::vector<VkDescriptorSet>    m_descriptor_sets_textures;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================

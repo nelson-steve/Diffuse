@@ -6,17 +6,17 @@ namespace Diffuse {
 	Camera::Camera() {
 		m_position = glm::vec3(0.0f, 0.0f, 0.0f);
 		m_aspect = 1280.0f / 720.0f;
-		m_near = 0.1f;
-		m_far = 10000.0f;
+		m_near = 0.1f; 
+		m_far = 1000.0f;
 		m_front = glm::vec3(0.0, 0.0, 1.0);
 		m_up = glm::vec3(0.0, 1.0, 0.0);
 		m_right = glm::vec3(1.0, 0.0, 0.0);
 		m_sensitivity = 0.5f;
-		m_speed = 2.5f;
+		m_speed = 0.2f;
 		m_yaw = 0.0f;
 		m_pitch = 0.0f;
 
-		m_projection = glm::perspective(45.0f, m_aspect, m_near, m_far);
+		m_projection = glm::perspective(90.0f, m_aspect, m_near, m_far);
 		m_view = glm::lookAt(m_position, m_position + m_front, m_up);
 	}
 

@@ -186,7 +186,7 @@ namespace Diffuse {
 		return shaderModule;
 	}
 
-	void vkUtilities::RecordCommandBuffer(Model* model, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
+	void vkUtilities::RecordCommandBuffer(Model* model, VkDescriptorSet descriptor_set, VkCommandBuffer command_buffer, uint32_t image_index, VkRenderPass render_pass, VkExtent2D swap_chain_extent,
 		std::vector<VkFramebuffer> swap_chain_framebuffers, VkPipeline graphics_pipeline, VkBuffer vertex_buffer, VkBuffer index_buffer, int indices_size, 
 		VkPipelineLayout pipeline_layout, int current_frame) {
 		VkCommandBufferBeginInfo beginInfo{};
@@ -226,6 +226,7 @@ namespace Diffuse {
 		scissor.extent = swap_chain_extent;
 		vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
+		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 		{
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 			VkBuffer vertexBuffers[] = { model->p_vertices.buffer };
@@ -562,7 +563,7 @@ namespace Diffuse {
 					// Get the texture index for this primitive
 					Model::Texture texture = model->textures[model->materials[primitive.materialIndex].baseColorTextureIndex];
 					// Bind the descriptor for the current primitive's texture
-					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &model->images[texture.imageIndex].descriptorSet, 0, nullptr);
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &model->images[texture.imageIndex].descriptorSet, 0, nullptr);
 					vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
 				}
 			}
