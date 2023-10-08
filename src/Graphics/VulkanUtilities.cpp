@@ -237,12 +237,7 @@ namespace Diffuse {
 			for (auto& node : model->nodes) {
 				DrawNode(model, command_buffer, pipeline_layout, node);
 			}
-			
-			//vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
-			//vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(model->p_indices_size), 1, 0, 0, 0);
 		}
-
-		//vkCmdDraw(command_buffer, indices_size, 1, 0, 0);
 
 		vkCmdEndRenderPass(command_buffer);
 		//
@@ -561,9 +556,9 @@ namespace Diffuse {
 			for (Model::Primitive& primitive : node->mesh.primitives) {
 				if (primitive.indexCount > 0) {
 					// Get the texture index for this primitive
-					Model::Texture texture = model->textures[model->materials[primitive.materialIndex].baseColorTextureIndex];
+					//Model::Texture texture = model->textures[model->materials[primitive.materialIndex].baseColorTextureIndex];
 					// Bind the descriptor for the current primitive's texture
-					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &model->images[texture.imageIndex].descriptorSet, 0, nullptr);
+					//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &model->images[texture.imageIndex].descriptorSet, 0, nullptr);
 					vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
 				}
 			}

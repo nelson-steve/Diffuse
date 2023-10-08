@@ -52,8 +52,32 @@ namespace Diffuse {
 		};
 
 		struct Material {
-			glm::vec4 baseColorFactor = glm::vec4(1.0f);
+			Texture2D* base_color_texture;
+			Texture2D* metallic_roghness_texture;
+			Texture2D* normal_texture;
+			Texture2D* occlusion_texture;
+			Texture2D* emissive_texture;
+			Texture2D* base_color_texture;
+
+			glm::vec4 base_color_factor = glm::vec4(1.0f);
+			float metallic_factor = 1.0f;
+			float roughness_factor = 0.0f;
+			glm::vec3 emissive_factor = glm::vec3(1.0f);
 			uint32_t baseColorTextureIndex;
+			float alpha_cutt_off = 0.5f;
+
+			struct TexCoordSets {
+				uint8_t baseColor = 0;
+				uint8_t metallicRoughness = 0;
+				uint8_t specularGlossiness = 0;
+				uint8_t normal = 0;
+				uint8_t occlusion = 0;
+				uint8_t emissive = 0;
+			} tex_coord_sets;
+
+			enum {
+				ALPHAMODE_OPAQUE, ALPHAMODE_MASK, ALPHAMODE_BLEND
+			} alpha_mode = ALPHAMODE_OPAQUE;
 		};
 
 		struct Image {
@@ -61,12 +85,16 @@ namespace Diffuse {
 			VkDescriptorSet descriptorSet;
 		};
 
-		struct Texture {
-			int32_t imageIndex;
+		struct TextureSampler {
+			VkFilter magFilter;
+			VkFilter minFilter;
+			VkSamplerAddressMode addressModeU;
+			VkSamplerAddressMode addressModeV;
+			VkSamplerAddressMode addressModeW;
 		};
 
-		std::vector<Image> images;
-		std::vector<Texture> textures;
+		std::vector<TextureSampler> textureSamplers;
+		std::vector<Texture2D*> textures;
 		std::vector<Material> materials;
 		std::vector<Node*> nodes;
 		uint32_t p_indices_size;
@@ -76,13 +104,8 @@ namespace Diffuse {
 		Model() = delete;
 		Model(const std::string& path, GraphicsDevice* graphics_device);
 		~Model();
-
-		void LoadImages(tinygltf::Model& input);
-
 		void LoadTextures(tinygltf::Model& input);
-
 		void LoadMaterials(tinygltf::Model& input);
-
 		void LoadNode(const tinygltf::Node& inputNode, const tinygltf::Model& input, Model::Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
 	};
 }

@@ -66,13 +66,34 @@ namespace Diffuse {
         }
 	}
 
-    Texture2D::Texture2D(void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight, GraphicsDevice* graphics_device) {
-		assert(buffer);
+    Texture2D::Texture2D(tinygltf::Image image, Model::TextureSampler texture_sampler, GraphicsDevice* graphics_device) {
+
+        // Get the image data from the glTF loader
+        unsigned char* buffer = nullptr;
+        VkDeviceSize bufferSize = 0;
+        bool deleteBuffer = false;
+        // We convert RGB-only images to RGBA, as most devices don't support RGB-formats in Vulkan
+        if (image.component == 3) {
+            bufferSize = image.width * image.height * 4;
+            buffer = new unsigned char[bufferSize];
+            unsigned char* rgba = buffer;
+            unsigned char* rgb = &image.image[0];
+            for (size_t i = 0; i < image.width * image.height; ++i) {
+                memcpy(rgba, rgb, sizeof(unsigned char) * 3);
+                rgba += 4;
+                rgb += 3;
+            }
+            deleteBuffer = true;
+        }
+        else {
+            buffer = &image.image[0];
+            bufferSize = image.image.size();
+        }
 
 		m_graphics_device = graphics_device;
-		m_width = texWidth;
-		m_height = texHeight;
-        VkDeviceSize imageSize = texWidth * texHeight * 4;
+		m_width = image.width;
+		m_height = image.height;
+        VkDeviceSize imageSize = m_width * m_height * 4;
 		m_mipLevels = 1;
 
 		VkBuffer stagingBuffer;
@@ -86,10 +107,10 @@ namespace Diffuse {
 		memcpy(data, buffer, bufferSize);
 		vkUnmapMemory(m_graphics_device->m_device, stagingMemory);
 
-		vkUtilities::CreateImage(texWidth, texHeight, m_graphics_device->m_device, m_graphics_device->m_physical_device, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory);
+		vkUtilities::CreateImage(m_width, m_height, m_graphics_device->m_device, m_graphics_device->m_physical_device, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory);
 
         vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        vkUtilities::CopyBufferToImage(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, stagingBuffer, m_texture_image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        vkUtilities::CopyBufferToImage(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, stagingBuffer, m_texture_image, static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height));
         vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         vkDestroyBuffer(m_graphics_device->m_device, stagingBuffer, nullptr);
