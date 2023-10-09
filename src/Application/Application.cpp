@@ -14,6 +14,7 @@ namespace Diffuse {
     static Model* model;
 
     void Application::Init() {
+
         camera = new Camera();
         m_graphics = new GraphicsDevice();
         model = new Model("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);

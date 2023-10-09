@@ -90,6 +90,9 @@ namespace Diffuse {
         //VkImage                         m_texture_image;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
+        VkSampler                       compute_sampler;
+        VkSampler                       m_default_sampler;
+        VkSampler                       m_brdf_sampler;
         //VkSampler                       m_texture_sampler;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
@@ -126,21 +129,33 @@ namespace Diffuse {
     public:
         // @brief - Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
         GraphicsDevice(Config config = {});
+        void Setup(Model& model);
 
-        // TODO: Think of a better place to put Draw function. Hint: Renderer class
         void Draw(Camera* camera, Model* model);
 
         void LoadModel();
         void CreateTexture(const std::string& path);
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
-        void CreateDescriptorSet(Model& model);
         void CreateGraphicsPipeline();
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
+
+        struct {
+            VkDescriptorSetLayout uniforms;
+            VkDescriptorSetLayout pbr;
+            VkDescriptorSetLayout skybox;
+            VkDescriptorSetLayout tonemap;
+            VkDescriptorSetLayout compute;
+        } setLayout;
+        struct SpecularFilterPushConstants
+        {
+            uint32_t level;
+            float roughness;
+        };
 
         std::shared_ptr<Window> GetWindow() const { return m_window; }
         //int m_indices_size;

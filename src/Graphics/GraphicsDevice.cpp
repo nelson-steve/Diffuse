@@ -2,6 +2,7 @@
 #include "ReadFile.hpp"
 #include "Renderer.hpp"
 #include "Model.hpp"
+#include "Texture2D.hpp"
 
 #include "stb_image.h"
 #include "tiny_gltf.h"
@@ -20,6 +21,51 @@
 #endif
 
 namespace Diffuse {
+    VkPipelineLayout CreatePipelineLayout(VkDevice device, const std::vector<VkDescriptorSetLayout>* setLayouts, const std::vector<VkPushConstantRange>* pushConstants)
+    {
+        VkPipelineLayout layout;
+        VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+        if (setLayouts && setLayouts->size() > 0) {
+            createInfo.setLayoutCount = (uint32_t)setLayouts->size();
+            createInfo.pSetLayouts = setLayouts->data();
+        }
+        if (pushConstants && pushConstants->size() > 0) {
+            createInfo.pushConstantRangeCount = (uint32_t)pushConstants->size();
+            createInfo.pPushConstantRanges = pushConstants->data();
+        }
+        if (vkCreatePipelineLayout(device, &createInfo, nullptr, &layout)) {
+            throw std::runtime_error("Failed to create pipeline layout");
+        }
+        return layout;
+    }
+
+    VkDescriptorSet AllocateDescriptorSet(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout)
+    {
+        VkDescriptorSet descriptorSet;
+        VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+        allocateInfo.descriptorPool = pool;
+        allocateInfo.descriptorSetCount = 1;
+        allocateInfo.pSetLayouts = &layout;
+        if (vkAllocateDescriptorSets(device, &allocateInfo, &descriptorSet)) {
+            throw std::runtime_error("Failed to allocate descriptor set");
+        }
+        return descriptorSet;
+    }
+
+    VkDescriptorSetLayout CreateDescriptorSetLayout(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>* bindings)
+    {
+        VkDescriptorSetLayout layout;
+        VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        if (bindings && bindings->size() > 0) {
+            createInfo.bindingCount = (uint32_t)bindings->size();
+            createInfo.pBindings = bindings->data();
+        }
+        if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &layout)) {
+            throw std::runtime_error("Failed to create descriptor set layout");
+        }
+        return layout;
+    }
+
     GraphicsDevice::GraphicsDevice(Config config) {
         // === Initializing GLFW ===
         int result = glfwInit();
@@ -114,10 +160,8 @@ namespace Diffuse {
 
         //		--Create Logical Device--
         QueueFamilyIndices indices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
-
         std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
         std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
         float queue_priority = 1.0f;
         for (uint32_t queueFamily : uniqueQueueFamilies) {
             VkDeviceQueueCreateInfo queue_create_info{};
@@ -130,20 +174,14 @@ namespace Diffuse {
 
         VkPhysicalDeviceFeatures device_features{};
         device_features.samplerAnisotropy = VK_TRUE;
-
         VkDeviceCreateInfo device_create_info{};
         device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
         device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
-
         device_create_info.pEnabledFeatures = &device_features;
-
         device_create_info.enabledExtensionCount = 0;
-
         device_create_info.enabledExtensionCount = static_cast<uint32_t>(config.required_device_extensions.size());
         device_create_info.ppEnabledExtensionNames = config.required_device_extensions.data();
-
         if (config.enable_validation_layers) {
             device_create_info.enabledLayerCount = static_cast<uint32_t>(config.validation_layers.size());
             device_create_info.ppEnabledLayerNames = config.validation_layers.data();
@@ -151,40 +189,32 @@ namespace Diffuse {
         else {
             device_create_info.enabledLayerCount = 0;
         }
-
         if (vkCreateDevice(m_physical_device, &device_create_info, nullptr, &m_device) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create logical device!");
         }
-
         vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphics_queue);
         vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_present_queue);
 
         //		--Create Swap Chain--
         SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
-
         VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
         VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swap_chain_support.presentModes);
         VkExtent2D extent = vkUtilities::ChooseSwapExtent(swap_chain_support.capabilities, m_window->window());
-
         uint32_t image_count = swap_chain_support.capabilities.minImageCount + 2;
         if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount) {
             image_count = swap_chain_support.capabilities.maxImageCount;
         }
-
         VkSwapchainCreateInfoKHR swap_chain_create_info{};
         swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         swap_chain_create_info.surface = m_surface;
-
         swap_chain_create_info.minImageCount = image_count;
         swap_chain_create_info.imageFormat = surfaceFormat.format;
         swap_chain_create_info.imageColorSpace = surfaceFormat.colorSpace;
         swap_chain_create_info.imageExtent = extent;
         swap_chain_create_info.imageArrayLayers = 1;
         swap_chain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
         QueueFamilyIndices queue_familt_indices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
         uint32_t queueFamilyIndices[] = { queue_familt_indices.graphicsFamily.value(), queue_familt_indices.presentFamily.value() };
-
         if (queue_familt_indices.graphicsFamily != queue_familt_indices.presentFamily) {
             swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             swap_chain_create_info.queueFamilyIndexCount = 2;
@@ -193,14 +223,11 @@ namespace Diffuse {
         else {
             swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         }
-
         swap_chain_create_info.preTransform = swap_chain_support.capabilities.currentTransform;
         swap_chain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         swap_chain_create_info.presentMode = presentMode;
         swap_chain_create_info.clipped = VK_TRUE;
-
         swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
-
         if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create swap chain!");
         }
@@ -427,8 +454,85 @@ namespace Diffuse {
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
 
-    void GraphicsDevice::CreateDescriptorSet(Model& model) {
-        uint32_t count = model.images.size();
+    void GraphicsDevice::Setup(Model& model) {
+
+        VkSampler compute_sampler;
+
+        VkSamplerCreateInfo sampler_create_info;
+        sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_create_info.minFilter = VK_FILTER_LINEAR;
+        sampler_create_info.magFilter = VK_FILTER_LINEAR;
+        sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+        if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &compute_sampler)) {
+            LOG_ERROR(false, "Failed to create pre-processing sampler!");
+        }
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties(m_physical_device, &properties);
+        sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sampler_create_info.anisotropyEnable = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sampler_create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+        sampler_create_info.minLod = 0.0f;
+        sampler_create_info.maxLod = FLT_MAX;
+        if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_default_sampler)) {
+            LOG_ERROR(false, "Failed to create default anistropic sampler!");
+        }
+
+        sampler_create_info.anisotropyEnable = VK_FALSE;
+        sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_brdf_sampler)) {
+            LOG_ERROR(false, "Failed to create brdf lut sampler!");
+        }
+
+        // TODO: remove this
+        int m_envmap_levels = 0;
+        VkDescriptorPool computer_descriptor_pool;
+        {
+            std::array<VkDescriptorPoolSize, 2> pool_size = { {
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_envmap_levels },
+            } };
+            
+            VkDescriptorPoolCreateInfo create_info;
+            create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            create_info.maxSets = 2;
+            create_info.poolSizeCount = (uint32_t)pool_size.size();
+            create_info.pPoolSizes = pool_size.data();
+
+            if (vkCreateDescriptorPool(m_device, &create_info, nullptr, &computer_descriptor_pool)) {
+                LOG_ERROR(false, "Failed to create setup descriptor pool!");
+            }
+        }
+
+        enum ComputeDescriptorSetBindingNames : uint32_t {
+            Binding_InputTexture = 0,
+            Binding_OutputTexture = 1,
+            Binding_OutputMipTail = 2,
+        };
+
+        // Create common descriptor set & pipeline layout for pre-processing compute shaders.
+        VkPipelineLayout computePipelineLayout;
+        VkDescriptorSet computeDescriptorSet;
+        {
+            std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
+            descriptorSetLayoutBindings.push_back(VkDescriptorSetLayoutBinding(Binding_InputTexture, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, &compute_sampler));
+            descriptorSetLayoutBindings.push_back(VkDescriptorSetLayoutBinding(Binding_OutputTexture, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr));
+            descriptorSetLayoutBindings.push_back(VkDescriptorSetLayoutBinding(Binding_OutputMipTail, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_envmap_levels - 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr));
+
+            setLayout.compute = CreateDescriptorSetLayout(m_device, &descriptorSetLayoutBindings);
+            computeDescriptorSet = AllocateDescriptorSet(m_device, computer_descriptor_pool, setLayout.compute);
+
+            const std::vector<VkDescriptorSetLayout> pipelineSetLayouts = {
+                setLayout.compute,
+            };
+            const std::vector<VkPushConstantRange> pipelinePushConstantRanges = {
+                { VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SpecularFilterPushConstants) },
+            };
+            computePipelineLayout = CreatePipelineLayout(m_device, &pipelineSetLayouts, &pipelinePushConstantRanges);
+        }
+
+        uint32_t count = model.textures.size();
         // Create Descriptor Pool
         std::array<VkDescriptorPoolSize, 2> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -526,7 +630,7 @@ namespace Diffuse {
 
             vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
-        for (size_t i = 0; i < model.images.size(); i++) {
+        for (size_t i = 0; i < model.textures.size(); i++) {
             std::vector<VkDescriptorSetLayout> layouts(1, m_descriptor_set_layout_textures);
             VkDescriptorSetAllocateInfo set_alloc_info{};
             set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -534,19 +638,19 @@ namespace Diffuse {
             set_alloc_info.descriptorSetCount = 1;
             set_alloc_info.pSetLayouts = layouts.data();
 
-            if (vkAllocateDescriptorSets(m_device, &set_alloc_info, &model.images[i].descriptorSet) != VK_SUCCESS) {
+            if (vkAllocateDescriptorSets(m_device, &set_alloc_info, &model.textures[i].descriptorSet) != VK_SUCCESS) {
                 LOG_ERROR(false, "failed to allocate descriptor sets!");
             }
 
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = model.images[i].texture->m_texture_image_view;
-            imageInfo.sampler = model.images[i].texture->m_texture_sampler;
+            imageInfo.imageView = model.textures[i].texture->m_texture_image_view;
+            imageInfo.sampler = model.textures[i].texture->m_texture_sampler;
 
             std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = model.images[i].descriptorSet;
+            descriptorWrites[0].dstSet = model.textures[i].descriptorSet;
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

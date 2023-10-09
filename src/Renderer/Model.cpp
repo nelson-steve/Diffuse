@@ -1,6 +1,7 @@
 #include "Model.hpp"
 
 #include "GraphicsDevice.hpp"
+#include "Texture2D.hpp"
 
 namespace Diffuse {
 
@@ -76,8 +77,8 @@ namespace Diffuse {
 			sampler.addressModeW = sampler.addressModeV;
 			textureSamplers.push_back(sampler);
 		}
-		LoadMaterials(model);
 		LoadTextures(model);
+		LoadMaterials(model);
 		tinygltf::Scene scene = model.scenes[model.defaultScene];
 		int size = scene.nodes.size();
 		for (size_t i = 0; i < scene.nodes.size(); i++) {
@@ -146,26 +147,23 @@ namespace Diffuse {
 
 	void Model::LoadTextures(tinygltf::Model& input)
 	{
-		textures.resize(input.images.size());
-		for (size_t i = 0; i < input.images.size(); i++) {
-			for (tinygltf::Texture& tex : input.textures) {
-				tinygltf::Image image = input.images[tex.source];
-				TextureSampler textureSampler;
-				if (tex.sampler == -1) {
-					// No sampler specified, use a default one
-					textureSampler.magFilter = VK_FILTER_LINEAR;
-					textureSampler.minFilter = VK_FILTER_LINEAR;
-					textureSampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-					textureSampler.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-					textureSampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-				}
-				else {
-					textureSampler = textureSamplers[tex.sampler];
-				}
-				Texture2D* texture;
-				texture = new Texture2D(image, textureSampler, m_graphics_device);
-				textures.push_back(texture);
+		for (tinygltf::Texture& tex : input.textures) {
+			tinygltf::Image image = input.images[tex.source];
+			TextureSampler textureSampler;
+			if (tex.sampler == -1) {
+				// No sampler specified, use a default one
+				textureSampler.magFilter = VK_FILTER_LINEAR;
+				textureSampler.minFilter = VK_FILTER_LINEAR;
+				textureSampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				textureSampler.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				textureSampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 			}
+			else {
+				textureSampler = textureSamplers[tex.sampler];
+			}
+			Model::Image img;
+			img.texture = new Texture2D(image, textureSampler, m_graphics_device);
+			textures.push_back(img);
 		}
 	}
 
@@ -175,11 +173,11 @@ namespace Diffuse {
 			Material material{};
 			//material.doubleSided = mat.doubleSided;
 			if (mat.values.find("baseColorTexture") != mat.values.end()) {
-				material.base_color_texture = textures[mat.values["baseColorTexture"].TextureIndex()];
+				material.base_color_texture = textures[mat.values["baseColorTexture"].TextureIndex()].texture;
 				material.tex_coord_sets.baseColor = mat.values["baseColorTexture"].TextureTexCoord();
 			}
 			if (mat.values.find("metallicRoughnessTexture") != mat.values.end()) {
-				material.metallic_roghness_texture = textures[mat.values["metallicRoughnessTexture"].TextureIndex()];
+				material.metallic_roghness_texture = textures[mat.values["metallicRoughnessTexture"].TextureIndex()].texture;
 				material.tex_coord_sets.metallicRoughness = mat.values["metallicRoughnessTexture"].TextureTexCoord();
 			}
 			if (mat.values.find("roughnessFactor") != mat.values.end()) {
@@ -192,15 +190,15 @@ namespace Diffuse {
 				material.base_color_factor = glm::make_vec4(mat.values["baseColorFactor"].ColorFactor().data());
 			}
 			if (mat.additionalValues.find("normalTexture") != mat.additionalValues.end()) {
-				material.normal_texture = textures[mat.additionalValues["normalTexture"].TextureIndex()];
+				material.normal_texture = textures[mat.additionalValues["normalTexture"].TextureIndex()].texture;
 				material.tex_coord_sets.normal = mat.additionalValues["normalTexture"].TextureTexCoord();
 			}
 			if (mat.additionalValues.find("emissiveTexture") != mat.additionalValues.end()) {
-				material.emissive_texture = textures[mat.additionalValues["emissiveTexture"].TextureIndex()];
+				material.emissive_texture = textures[mat.additionalValues["emissiveTexture"].TextureIndex()].texture;
 				material.tex_coord_sets.emissive = mat.additionalValues["emissiveTexture"].TextureTexCoord();
 			}
 			if (mat.additionalValues.find("occlusionTexture") != mat.additionalValues.end()) {
-				material.occlusion_texture = textures[mat.additionalValues["occlusionTexture"].TextureIndex()];
+				material.occlusion_texture = textures[mat.additionalValues["occlusionTexture"].TextureIndex()].texture;
 				material.tex_coord_sets.occlusion = mat.additionalValues["occlusionTexture"].TextureTexCoord();
 			}
 			if (mat.additionalValues.find("alphaMode") != mat.additionalValues.end()) {

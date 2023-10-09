@@ -2,8 +2,6 @@
 
 #include "tiny_gltf.h"
 
-#include "Texture2D.hpp"
-
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "vulkan/vulkan.hpp"
@@ -13,6 +11,7 @@ namespace Diffuse {
 
 	struct Vertex;
 	class GraphicsDevice;
+	class Texture2D;
 
 	class Model {
 	public:
@@ -57,7 +56,7 @@ namespace Diffuse {
 			Texture2D* normal_texture;
 			Texture2D* occlusion_texture;
 			Texture2D* emissive_texture;
-			Texture2D* base_color_texture;
+			//Texture2D* base_color_texture;
 
 			glm::vec4 base_color_factor = glm::vec4(1.0f);
 			float metallic_factor = 1.0f;
@@ -94,7 +93,7 @@ namespace Diffuse {
 		};
 
 		std::vector<TextureSampler> textureSamplers;
-		std::vector<Texture2D*> textures;
+		std::vector<Image> textures;
 		std::vector<Material> materials;
 		std::vector<Node*> nodes;
 		uint32_t p_indices_size;
