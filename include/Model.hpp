@@ -56,7 +56,6 @@ namespace Diffuse {
 			Texture2D* normal_texture;
 			Texture2D* occlusion_texture;
 			Texture2D* emissive_texture;
-			//Texture2D* base_color_texture;
 
 			glm::vec4 base_color_factor = glm::vec4(1.0f);
 			float metallic_factor = 1.0f;

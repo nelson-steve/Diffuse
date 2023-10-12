@@ -370,15 +370,18 @@ namespace Diffuse {
 		);
 	}
 
-	void vkUtilities::CreateImage(uint32_t width, uint32_t height, VkDevice device, VkPhysicalDevice physical_device, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+	void vkUtilities::CreateImage(uint32_t width, uint32_t height, VkDevice device, VkPhysicalDevice physical_device, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t layers, uint32_t miplevels) {
+		assert(layers > 0);
+		assert(miplevels > 0);
 		VkImageCreateInfo imageInfo{};
+		imageInfo.flags = (layers == 6) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
 		imageInfo.extent.width = width;
 		imageInfo.extent.height = height;
 		imageInfo.extent.depth = 1;
-		imageInfo.mipLevels = 1;
-		imageInfo.arrayLayers = 1;
+		imageInfo.mipLevels = miplevels;
+		imageInfo.arrayLayers = layers;
 		imageInfo.format = format;
 		imageInfo.tiling = tiling;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -403,26 +406,6 @@ namespace Diffuse {
 		}
 
 		vkBindImageMemory(device, image, imageMemory, 0);
-	}
-
-	VkImageView vkUtilities::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device) {
-		VkImageViewCreateInfo viewInfo{};
-		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		viewInfo.image = image;
-		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		viewInfo.format = format;
-		viewInfo.subresourceRange.aspectMask = aspectFlags;
-		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
-		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount = 1;
-
-		VkImageView imageView;
-		if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create texture image view!");
-		}
-
-		return imageView;
 	}
 
 	VkCommandBuffer vkUtilities::BeginSingleTimeCommands(VkCommandPool command_pool, VkDevice device) {
@@ -531,17 +514,19 @@ namespace Diffuse {
 		EndSingleTimeCommands(commandBuffer, device, graphics_queue, command_pool);
 	}
 
-	VkImageView vkUtilities::CreateImageView(VkDevice device, VkImage image, VkFormat format) {
+	VkImageView vkUtilities::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device, 
+		uint32_t layers, uint32_t basemiplevels, uint32_t nummiplevels) {
 		VkImageViewCreateInfo viewInfo{};
+		assert(layers > 0);
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image = image;
-		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.viewType = (layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 		viewInfo.format = format;
-		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.aspectMask = aspectFlags;
+		viewInfo.subresourceRange.baseMipLevel = basemiplevels;
+		viewInfo.subresourceRange.levelCount = nummiplevels;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount = 1;
+		viewInfo.subresourceRange.layerCount = layers;
 
 		VkImageView imageView;
 		if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
@@ -566,5 +551,14 @@ namespace Diffuse {
 		for (auto& child : node->children) {
 			DrawNode(model, commandBuffer, pipelineLayout, child);
 		}
+	}
+
+	VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding, uint32_t descriptorCount) {
+		VkDescriptorSetLayoutBinding setLayoutBinding{};
+		setLayoutBinding.descriptorType = type;
+		setLayoutBinding.stageFlags = stageFlags;
+		setLayoutBinding.binding = binding;
+		setLayoutBinding.descriptorCount = descriptorCount;
+		return setLayoutBinding;
 	}
 }

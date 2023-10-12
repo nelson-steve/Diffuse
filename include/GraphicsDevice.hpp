@@ -76,92 +76,149 @@ namespace Diffuse {
         }
     };
 
+    template<class T>
+    struct Resource
+    {
+        T resource;
+        VkDeviceMemory memory;
+        VkDeviceSize allocationSize;
+        uint32_t memoryTypeIndex;
+    };
+
+    struct RenderTarget
+    {
+        Resource<VkImage> colorImage;
+        Resource<VkImage> depthImage;
+        VkImageView colorView;
+        VkImageView depthView;
+        VkFormat colorFormat;
+        VkFormat depthFormat;
+        uint32_t width, height;
+        uint32_t samples;
+    };
+
+    struct Texture
+    {
+        Resource<VkImage> image;
+        VkImageView view;
+        uint32_t width, height;
+        uint32_t layers;
+        uint32_t levels;
+    };
+
     class GraphicsDevice {
     private:
         // == WINDOW HANDLE ====================================
         // Window handle using GLFW 
         std::shared_ptr<Window>         m_window;
         // == VULKAN HANDLES ===================================
-        VkDevice                        m_device;
-        VkFormat                        m_swap_chain_image_format;
         VkQueue                         m_present_queue;
-        //VkBuffer                        m_index_buffer;
-        //VkBuffer                        m_vertex_buffer;
-        //VkImage                         m_texture_image;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
-        VkSampler                       compute_sampler;
+        VkRect2D                        m_frame_rect;
+        VkDevice                        m_device;
+        VkFormat                        m_swap_chain_image_format;
+        VkSampler                       m_compute_sampler;
         VkSampler                       m_default_sampler;
         VkSampler                       m_brdf_sampler;
-        //VkSampler                       m_texture_sampler;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
         VkPipeline                      m_graphics_pipeline;
         VkImageView                     m_depth_image_view;
-        //VkImageView                     m_texture_image_view;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;
-        //VkDeviceMemory                  m_texture_image_memory;
         VkDeviceMemory                  m_index_buffer_memory;
         VkDeviceMemory                  m_depth_image_memory;
         VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
         VkDescriptorPool                m_descriptor_pool;
+        //VkPipelineLayout                m_tonemapPipelineLayout;
         VkPipelineLayout                m_pipeline_layout;
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            m_in_flight_fences;
         std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
-        VkDescriptorSetLayout           m_descriptor_set_layout_ubo;
-        VkDescriptorSetLayout           m_descriptor_set_layout_textures;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
-        std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
+        std::vector<RenderTarget>       m_renderTargets;
+        //std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
+        std::vector<VkFramebuffer>      m_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
-        VkDescriptorSet                 m_descriptor_set;
-        //std::vector<VkDescriptorSet>    m_descriptor_sets_textures;
+        std::vector<VkDescriptorSet>    m_uniformsDescriptorSets;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
         // @brief - Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
         GraphicsDevice(Config config = {});
         void Setup(Model& model);
-
         void Draw(Camera* camera, Model* model);
 
-        void LoadModel();
-        void CreateTexture(const std::string& path);
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
-        void CreateGraphicsPipeline();
+        VkPipeline CreateGraphicsPipeline(uint32_t subpass,
+            const std::string& vs, const std::string& fs, VkPipelineLayout layout,
+            const std::vector<VkVertexInputBindingDescription>* vertexInputBindings = nullptr,
+            const std::vector<VkVertexInputAttributeDescription>* vertexAttributes = nullptr,
+            const VkPipelineMultisampleStateCreateInfo* multisampleState = nullptr,
+            const VkPipelineDepthStencilStateCreateInfo* depthStencilState = nullptr);
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
+        void GenerateMipmaps(const Texture2D& texture);
 
-        struct {
-            VkDescriptorSetLayout uniforms;
-            VkDescriptorSetLayout pbr;
-            VkDescriptorSetLayout skybox;
-            VkDescriptorSetLayout tonemap;
-            VkDescriptorSetLayout compute;
-        } setLayout;
         struct SpecularFilterPushConstants
         {
             uint32_t level;
             float roughness;
         };
 
+        struct {
+            VkDescriptorSetLayout pbr;
+            VkDescriptorSetLayout skybox;
+        } m_setLayouts;
+
+        struct {
+            VkDescriptorSet pbr;
+            VkDescriptorSet uniforms;
+            VkDescriptorSet skybox;
+            std::vector<VkDescriptorSet> tonemap;
+        } m_descriptorsets;
+
+        struct {
+            VkPipelineLayout pbr;
+            VkPipelineLayout skybox;
+            VkPipelineLayout tonemap;
+        } m_pipelinelayouts;
+
+        struct {
+            VkPipeline pbr;
+            VkPipeline skybox;
+            VkPipeline tonemap;
+        } m_pipelines;
+
+        Texture2D* m_albedoTexture;
+        Texture2D* m_normalTexture;
+        Texture2D* m_metalnessTexture;
+        Texture2D* m_roughnessTexture;
+
+
+        Texture2D* m_envTexture;
+        Texture2D* m_irmapTexture;
+        Texture2D* m_spBRDF_LUT;
+
         std::shared_ptr<Window> GetWindow() const { return m_window; }
         //int m_indices_size;
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 1;
+        const int m_numFrames = 1;
+        uint32_t m_renderSamples;
 
         friend class Model;
         friend class Texture2D;

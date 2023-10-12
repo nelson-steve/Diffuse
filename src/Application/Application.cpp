@@ -20,7 +20,7 @@ namespace Diffuse {
         model = new Model("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
         //model = new Model("../assets/Avocado/Avocado.gltf", m_graphics);
         //model = new Model("../assets/Sponza/Sponza/glTF/Sponza.gltf", m_graphics);
-        m_graphics->CreateDescriptorSet(*model);
+        m_graphics->Setup(*model);
         renderer = new Renderer(m_graphics);
     }
     void Application::Update()

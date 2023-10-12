@@ -6,17 +6,28 @@
 #include "stb_image.h"
 
 namespace Diffuse {
-	Texture2D::Texture2D(const std::string& path, GraphicsDevice* graphics_device) {
+	Texture2D::Texture2D(const std::string& path, VkFormat format, GraphicsDevice* graphics_device) {
 		m_graphics_device = graphics_device;
-
-        // Create Texture Image
-        int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-        if (!pixels) {
-            throw std::runtime_error("failed to load texture image!");
-        }
+		// Create Texture Image
+		int texWidth, texHeight, texChannels;
+		void* m_pixels;
+		VkDeviceSize imageSize;
+		if (stbi_is_hdr(path.c_str())) {
+			float* pixels = stbi_loadf(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+			imageSize = (texWidth * (4*sizeof(float))) * texHeight;
+			if (!pixels) {
+				throw std::runtime_error("failed to load texture image!");
+			}
+			m_pixels = reinterpret_cast<unsigned char*>(pixels);
+		}
+		else {
+			stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+			imageSize = (texWidth * (4 * sizeof(unsigned char))) * texHeight;
+			if (!pixels) {
+				throw std::runtime_error("failed to load texture image!");
+			}
+			m_pixels = pixels;
+		}
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -25,22 +36,22 @@ namespace Diffuse {
 
         void* data;
         vkMapMemory(m_graphics_device->m_device, stagingBufferMemory, 0, imageSize, 0, &data);
-        memcpy(data, pixels, static_cast<size_t>(imageSize));
+        memcpy(data, m_pixels, static_cast<size_t>(imageSize));
         vkUnmapMemory(m_graphics_device->m_device, stagingBufferMemory);
 
-        stbi_image_free(pixels);
+        stbi_image_free(m_pixels);
 
-        vkUtilities::CreateImage(texWidth, texHeight, m_graphics_device->m_device, m_graphics_device->m_physical_device, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory);
+        vkUtilities::CreateImage(texWidth, texHeight, m_graphics_device->m_device, m_graphics_device->m_physical_device, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory, 1, 1);
 
-        vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         vkUtilities::CopyBufferToImage(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, stagingBuffer, m_texture_image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         vkDestroyBuffer(m_graphics_device->m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_graphics_device->m_device, stagingBufferMemory, nullptr);
 
         // Create Texture Image View
-        m_texture_image_view = vkUtilities::CreateImageView(m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB);
+		m_texture_image_view = vkUtilities::CreateImageView(m_texture_image, format, VK_IMAGE_ASPECT_COLOR_BIT, m_graphics_device->m_device, 1, 0, 1);
 
         // Create Texture Image Sampler
         VkPhysicalDeviceProperties properties{};
@@ -107,7 +118,9 @@ namespace Diffuse {
 		memcpy(data, buffer, bufferSize);
 		vkUnmapMemory(m_graphics_device->m_device, stagingMemory);
 
-		vkUtilities::CreateImage(m_width, m_height, m_graphics_device->m_device, m_graphics_device->m_physical_device, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory);
+		vkUtilities::CreateImage(m_width, m_height, m_graphics_device->m_device, m_graphics_device->m_physical_device, 
+			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+			m_texture_image, m_texture_image_memory, 1, 1);
 
         vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         vkUtilities::CopyBufferToImage(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, stagingBuffer, m_texture_image, static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height));
@@ -117,7 +130,7 @@ namespace Diffuse {
         vkFreeMemory(m_graphics_device->m_device, stagingMemory, nullptr);
 
         // Create Texture Image View
-        m_texture_image_view = vkUtilities::CreateImageView(m_graphics_device->m_device, m_texture_image, VK_FORMAT_R8G8B8A8_SRGB);
+		m_texture_image_view = vkUtilities::CreateImageView(m_texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, m_graphics_device->m_device, 1, 0, m_mipLevels);
 
         // Create Texture Image Sampler
         VkPhysicalDeviceProperties properties{};
@@ -142,6 +155,64 @@ namespace Diffuse {
             throw std::runtime_error("failed to create texture sampler!");
         }
     }
+
+	template<typename T> static constexpr T numMipmapLevels(T width, T height)
+	{
+		T levels = 1;
+		while ((width | height) >> levels) {
+			++levels;
+		}
+		return levels;
+	}
+
+	Texture2D::Texture2D(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, uint32_t levels, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device) {
+		m_graphics_device = graphics_device;
+		m_width = width;
+		m_height = height;
+		VkDeviceSize imageSize = m_width * m_height * 4;
+		//m_mipLevels = levels;
+		m_mipLevels = (levels > 0) ? levels : numMipmapLevels(width, height);
+
+		VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | additionalUsage;
+		if (m_mipLevels > 1) {
+			usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // For mipmap generation
+		}
+
+		vkUtilities::CreateImage(m_width, m_height, m_graphics_device->m_device, m_graphics_device->m_physical_device, format, 
+			VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory, layers, m_mipLevels);
+
+		//vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		//vkUtilities::TransitionImageLayout(m_graphics_device->m_graphics_queue, m_graphics_device->m_command_pool, m_graphics_device->m_device, m_texture_image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		// Create Texture Image View
+		m_texture_image_view = vkUtilities::CreateImageView(m_texture_image, format, VK_IMAGE_ASPECT_COLOR_BIT, m_graphics_device->m_device, layers, 0, m_mipLevels);
+
+		/*
+		// Create Texture Image Sampler
+		VkPhysicalDeviceProperties properties{};
+		vkGetPhysicalDeviceProperties(m_graphics_device->m_physical_device, &properties);
+
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+		if (vkCreateSampler(m_graphics_device->m_device, &samplerInfo, nullptr, &m_texture_sampler) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create texture sampler!");
+		}
+		*/
+	}
+
 #if 0
 	void loadFromFile(
 		std::string filename,
