@@ -14,6 +14,7 @@ set(SOURCES
     src/Renderer/Camera.cpp
     src/Graphics/Window.cpp
     src/Graphics/VulkanUtilities.cpp
+    src/Graphics/Buffer.cpp
     src/Utils/ReadFile.cpp
     src/main.cpp
 )
@@ -27,6 +28,7 @@ set(HEADERS
     include/Camera.hpp
     include/Window.hpp
     include/VulkanUtilities.hpp
+    include/Buffer.hpp
     include/ReadFile.hpp
     dependencies/tiny_gltf/json.hpp
     dependencies/tiny_gltf/tiny_gltf.h

@@ -2,6 +2,7 @@
 
 #include "VulkanUtilities.hpp"
 #include "Window.hpp"
+#include "Buffer.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -26,6 +27,7 @@ namespace Diffuse {
         glm::mat4 view;
         glm::mat4 proj;
     };
+#if 0
     struct Vertex {
         glm::vec3 pos;
         glm::vec3 normal;
@@ -75,35 +77,23 @@ namespace Diffuse {
                 color       == other.color;
         }
     };
+#endif
 
-    template<class T>
-    struct Resource
-    {
-        T resource;
-        VkDeviceMemory memory;
-        VkDeviceSize allocationSize;
-        uint32_t memoryTypeIndex;
-    };
-
-    struct RenderTarget
-    {
-        Resource<VkImage> colorImage;
-        Resource<VkImage> depthImage;
-        VkImageView colorView;
-        VkImageView depthView;
-        VkFormat colorFormat;
-        VkFormat depthFormat;
-        uint32_t width, height;
-        uint32_t samples;
-    };
-
-    struct Texture
-    {
-        Resource<VkImage> image;
-        VkImageView view;
-        uint32_t width, height;
-        uint32_t layers;
-        uint32_t levels;
+    struct Material {
+        // Parameter block used as push constant block
+        struct PushBlock {
+            float roughness = 0.0f;
+            float metallic = 0.0f;
+            float specular = 0.0f;
+            float r, g, b;
+        } params;
+        std::string name;
+        Material() {};
+        Material(std::string n, glm::vec3 c) : name(n) {
+            params.r = c.r;
+            params.g = c.g;
+            params.b = c.b;
+        };
     };
 
     class GraphicsDevice {
@@ -112,7 +102,7 @@ namespace Diffuse {
         // Window handle using GLFW 
         std::shared_ptr<Window>         m_window;
         // == VULKAN HANDLES ===================================
-        VkQueue                         m_present_queue;
+        //VkQueue                         m_present_queue;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
         VkRect2D                        m_frame_rect;
@@ -132,8 +122,8 @@ namespace Diffuse {
         VkDeviceMemory                  m_depth_image_memory;
         VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
+        VkPipelineCache                 m_pipeline_cache;
         VkDescriptorPool                m_descriptor_pool;
-        //VkPipelineLayout                m_tonemapPipelineLayout;
         VkPipelineLayout                m_pipeline_layout;
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
@@ -144,7 +134,6 @@ namespace Diffuse {
         std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkSemaphore>        m_render_finished_semaphores;
         std::vector<VkSemaphore>        m_image_available_semaphores;
-        std::vector<RenderTarget>       m_renderTargets;
         //std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkFramebuffer>      m_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
@@ -154,7 +143,7 @@ namespace Diffuse {
     public:
         // @brief - Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
         GraphicsDevice(Config config = {});
-        void Setup(Model& model);
+        void Setup();
         void Draw(Camera* camera, Model* model);
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
@@ -170,47 +159,59 @@ namespace Diffuse {
         void RecreateSwapchain();
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
-        void GenerateMipmaps(const Texture2D& texture);
 
-        struct SpecularFilterPushConstants
-        {
-            uint32_t level;
-            float roughness;
-        };
+        struct Textures {
+            //TextureCubeMap environmentCube;
+            // Generated at runtime
+            Texture2D* lutBrdf;
+            //TextureCubeMap irradianceCube;
+            //TextureCubeMap prefilteredCube;
+        } textures;
 
-        struct {
-            VkDescriptorSetLayout pbr;
-            VkDescriptorSetLayout skybox;
-        } m_setLayouts;
-
-        struct {
-            VkDescriptorSet pbr;
-            VkDescriptorSet uniforms;
-            VkDescriptorSet skybox;
-            std::vector<VkDescriptorSet> tonemap;
-        } m_descriptorsets;
+        struct Meshes {
+            Model skybox;
+            std::vector<Model> objects;
+            int32_t objectIndex = 0;
+        } models;
 
         struct {
-            VkPipelineLayout pbr;
-            VkPipelineLayout skybox;
-            VkPipelineLayout tonemap;
-        } m_pipelinelayouts;
+            Buffer object;
+            Buffer skybox;
+            Buffer params;
+        } uniformBuffers;
+
+        struct UBOMatrices {
+            glm::mat4 projection;
+            glm::mat4 model;
+            glm::mat4 view;
+            glm::vec3 camPos;
+        } uboMatrices;
+
+        struct UBOParams {
+            glm::vec4 lights[4];
+            float exposure = 4.5f;
+            float gamma = 2.2f;
+        } uboParams;
 
         struct {
-            VkPipeline pbr;
             VkPipeline skybox;
-            VkPipeline tonemap;
-        } m_pipelines;
+            VkPipeline pbr;
+        } pipelines;
 
-        Texture2D* m_albedoTexture;
-        Texture2D* m_normalTexture;
-        Texture2D* m_metalnessTexture;
-        Texture2D* m_roughnessTexture;
+        struct {
+            VkDescriptorSet object;
+            VkDescriptorSet skybox;
+        } descriptorSets;
 
+        VkPipelineLayout pipelineLayout;
+        VkDescriptorSetLayout descriptorSetLayout;
 
-        Texture2D* m_envTexture;
-        Texture2D* m_irmapTexture;
-        Texture2D* m_spBRDF_LUT;
+        // Default materials to select from
+        std::vector<Material> materials;
+        int32_t materialIndex = 0;
+
+        std::vector<std::string> materialNames;
+        std::vector<std::string> objectNames;
 
         std::shared_ptr<Window> GetWindow() const { return m_window; }
         //int m_indices_size;
