@@ -9,8 +9,9 @@ namespace Diffuse {
 
 	class Texture2D {
 	public:
+		Texture2D() {}
 		Texture2D(const std::string& path, VkFormat format, GraphicsDevice* graphics_device);
-		Texture2D(tinygltf::Image image, Model::TextureSampler texture_sampler, GraphicsDevice* graphics_device);
+		Texture2D(tinygltf::Image image, GraphicsDevice* graphics_device);
 		Texture2D(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, uint32_t levels, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
 	public:
 		GraphicsDevice* m_graphics_device;
@@ -20,9 +21,35 @@ namespace Diffuse {
 
 		VkImage m_texture_image;
 		VkSampler m_texture_sampler;
+        VkImageLayout m_imageLayout;
 		VkImageView m_texture_image_view;
 		VkDeviceMemory m_texture_image_memory;
+        VkDescriptorImageInfo m_descriptor;
 	};
+
+    class TextureCubemap {
+    public:
+        TextureCubemap() {}
+        TextureCubemap(std::string filename,
+            VkFormat format,
+            GraphicsDevice* graphics_device,
+            VkQueue copyQueue,
+            VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
+            VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        void UpdateDescriptor();
+    public:
+        GraphicsDevice* m_graphics_device;
+
+        uint32_t m_width, m_height, m_mipLevels;
+        uint32_t m_layers;
+
+        VkImage m_texture_image;
+        VkSampler m_texture_sampler;
+        VkImageView m_texture_image_view;
+        VkDeviceMemory m_texture_image_memory;
+        VkDescriptorImageInfo m_descriptor;
+        VkImageLayout m_imageLayout;
+    };
 
     struct ImageMemoryBarrier
     {

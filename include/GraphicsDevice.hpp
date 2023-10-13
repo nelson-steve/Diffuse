@@ -79,7 +79,7 @@ namespace Diffuse {
     };
 #endif
 
-    struct Material {
+    struct ObjectMaterial {
         // Parameter block used as push constant block
         struct PushBlock {
             float roughness = 0.0f;
@@ -88,8 +88,8 @@ namespace Diffuse {
             float r, g, b;
         } params;
         std::string name;
-        Material() {};
-        Material(std::string n, glm::vec3 c) : name(n) {
+        ObjectMaterial() {};
+        ObjectMaterial(std::string n, glm::vec3 c) : name(n) {
             params.r = c.r;
             params.g = c.g;
             params.b = c.b;
@@ -102,7 +102,7 @@ namespace Diffuse {
         // Window handle using GLFW 
         std::shared_ptr<Window>         m_window;
         // == VULKAN HANDLES ===================================
-        //VkQueue                         m_present_queue;
+        VkQueue                         m_present_queue;
         VkQueue                         m_graphics_queue;
         VkImage                         m_depth_image;
         VkRect2D                        m_frame_rect;
@@ -113,8 +113,9 @@ namespace Diffuse {
         VkSampler                       m_brdf_sampler;
         VkInstance                      m_instance;
         VkExtent2D                      m_swap_chain_extent;
-        VkPipeline                      m_graphics_pipeline;
+        //VkPipeline                      m_graphics_pipeline;
         VkImageView                     m_depth_image_view;
+        VkSubmitInfo                    m_submit_info;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
         VkCommandPool                   m_command_pool;
@@ -128,6 +129,7 @@ namespace Diffuse {
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            m_in_flight_fences;
+        std::vector<VkFence>            imagesInFlightFences;
         std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
@@ -137,14 +139,20 @@ namespace Diffuse {
         //std::vector<VkFramebuffer>      m_swap_chain_framebuffers;
         std::vector<VkFramebuffer>      m_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
-        std::vector<VkDescriptorSet>    m_uniformsDescriptorSets;
+        //std::vector<VkDescriptorSet>    m_uniformsDescriptorSets;
         std::vector<VkCommandBuffer>    m_command_buffers;
         // =====================================================
     public:
         // @brief - Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
         GraphicsDevice(Config config = {});
-        void Setup();
-        void Draw(Camera* camera, Model* model);
+
+        VkDevice Device() const { return m_device; }
+        VkPhysicalDevice PhysicalDevice() const { return m_physical_device; }
+        VkCommandPool CommandPool() const { return m_command_pool; }
+        VkQueue Queue() const { return m_graphics_queue; }
+
+        void Setup(Camera* camera);
+        void Draw(Camera* camera);
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Vertex> vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
@@ -157,15 +165,20 @@ namespace Diffuse {
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
+        void BuildCommandBuffers();
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
 
+        void GenerateBRDFLUT();
+        void GenerateIrradianceCube();
+        void GeneratePrefilteredCube();
+
         struct Textures {
-            //TextureCubeMap environmentCube;
+            TextureCubemap* environmentCube;
             // Generated at runtime
             Texture2D* lutBrdf;
-            //TextureCubeMap irradianceCube;
-            //TextureCubeMap prefilteredCube;
+            TextureCubemap* irradianceCube;
+            TextureCubemap* prefilteredCube;
         } textures;
 
         struct Meshes {
@@ -207,7 +220,7 @@ namespace Diffuse {
         VkDescriptorSetLayout descriptorSetLayout;
 
         // Default materials to select from
-        std::vector<Material> materials;
+        std::vector<ObjectMaterial> materials;
         int32_t materialIndex = 0;
 
         std::vector<std::string> materialNames;
@@ -218,7 +231,7 @@ namespace Diffuse {
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
         const int MAX_FRAMES_IN_FLIGHT = 1;
-        const int m_numFrames = 1;
+        //const int m_numFrames = 1;
         uint32_t m_renderSamples;
 
         friend class Model;

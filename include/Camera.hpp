@@ -21,6 +21,9 @@ namespace Diffuse {
 			return m_projection;
 			//return glm::perspective(m_fov, m_aspect, m_near, m_far);
 		}
+		glm::vec3 GetPosition() const {
+			return m_position;
+		}
 	private:
 		glm::vec3 m_position;
 		glm::vec3 m_front;

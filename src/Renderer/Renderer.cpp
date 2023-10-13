@@ -10,6 +10,6 @@ namespace Diffuse {
 	}
 
 	void Renderer::RenderModel(Camera* camera, float dt, Model* model) {
-        device->Draw(camera, model);
+        //device->Draw(camera, model);
 	}
 }

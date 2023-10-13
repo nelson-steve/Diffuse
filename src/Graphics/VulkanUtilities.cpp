@@ -229,13 +229,13 @@ namespace Diffuse {
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 		{
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-			VkBuffer vertexBuffers[] = { model->p_vertices.buffer };
+			VkBuffer vertexBuffers[] = { model->vertices.buffer };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(command_buffer, model->p_indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(command_buffer, model->indices.buffer, 0, VK_INDEX_TYPE_UINT32);
 			
 			for (auto& node : model->nodes) {
-				DrawNode(model, command_buffer, pipeline_layout, node);
+				DrawNode(model, command_buffer, pipeline_layout);
 			}
 		}
 
@@ -536,29 +536,137 @@ namespace Diffuse {
 		return imageView;
 	}
 
-	void vkUtilities::DrawNode(Model* model, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, Model::Node* node) {
-		if (node->mesh.primitives.size() > 0) {
-			for (Model::Primitive& primitive : node->mesh.primitives) {
-				if (primitive.indexCount > 0) {
-					// Get the texture index for this primitive
-					//Model::Texture texture = model->textures[model->materials[primitive.materialIndex].baseColorTextureIndex];
-					// Bind the descriptor for the current primitive's texture
-					//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &model->images[texture.imageIndex].descriptorSet, 0, nullptr);
-					vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
-				}
-			}
-		}
-		for (auto& child : node->children) {
-			DrawNode(model, commandBuffer, pipelineLayout, child);
-		}
+	void vkUtilities::DrawNode(Model* model, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
+		//if (node->mesh.primitives.size() > 0) {
+		//	for (Model::Primitive& primitive : node->mesh.primitives) {
+		//		if (primitive.indexCount > 0) {
+		//			// Get the texture index for this primitive
+		//			//Model::Texture texture = model->textures[model->materials[primitive.materialIndex].baseColorTextureIndex];
+		//			// Bind the descriptor for the current primitive's texture
+		//			//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &model->images[texture.imageIndex].descriptorSet, 0, nullptr);
+		//			vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+		//		}
+		//	}
+		//}
+		//for (auto& child : node->children) {
+		//	DrawNode(model, commandBuffer, pipelineLayout, child);
+		//}
 	}
 
-	VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding, uint32_t descriptorCount) {
+	VkDescriptorSetLayoutBinding vkUtilities::DescriptorSetLayoutBinding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding, uint32_t descriptorCount) {
 		VkDescriptorSetLayoutBinding setLayoutBinding{};
 		setLayoutBinding.descriptorType = type;
 		setLayoutBinding.stageFlags = stageFlags;
 		setLayoutBinding.binding = binding;
 		setLayoutBinding.descriptorCount = descriptorCount;
 		return setLayoutBinding;
+	}
+
+	VkResult vkUtilities::CreateBuffer(VkDevice device, VkPhysicalDevice physical_device, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceSize size, VkBuffer* buffer, VkDeviceMemory* memory, void* data)
+	{
+		// Create the buffer handle
+		VkBufferCreateInfo bufferCreateInfo = BufferCreateInfo(usageFlags, size);
+		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		if (vkCreateBuffer(device, &bufferCreateInfo, nullptr, buffer) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+		// Create the memory backing up the buffer handle
+		VkMemoryRequirements memReqs;
+		VkMemoryAllocateInfo memAlloc = MemoryAllocateInfo();
+		vkGetBufferMemoryRequirements(device, *buffer, &memReqs);
+		memAlloc.allocationSize = memReqs.size;
+		// Find a memory type index that fits the properties of the buffer
+		memAlloc.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, memoryPropertyFlags, physical_device);
+		// If the buffer has VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT set we also need to enable the appropriate flag during allocation
+		VkMemoryAllocateFlagsInfoKHR allocFlagsInfo{};
+		if (usageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+			allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+			allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+			memAlloc.pNext = &allocFlagsInfo;
+		}
+		if (vkAllocateMemory(device, &memAlloc, nullptr, memory) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+		// If a pointer to the buffer data has been passed, map the buffer and copy over the data
+		if (data != nullptr)
+		{
+			void* mapped;
+			if (vkMapMemory(device, *memory, 0, size, 0, &mapped) != VK_SUCCESS) {
+				throw std::runtime_error("Failed to create descriptor pool");
+			}
+			memcpy(mapped, data, size);
+			// If host coherency hasn't been requested, do a manual flush to make writes visible
+			if ((memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+			{
+				VkMappedMemoryRange mappedRange = MappedMemoryRange();
+				mappedRange.memory = *memory;
+				mappedRange.offset = 0;
+				mappedRange.size = size;
+				vkFlushMappedMemoryRanges(device, 1, &mappedRange);
+			}
+			vkUnmapMemory(device, *memory);
+		}
+
+		// Attach the memory to the buffer object
+		if (vkBindBufferMemory(device, *buffer, *memory, 0) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+		return VK_SUCCESS;
+	}
+
+	VkResult vkUtilities::CreateBuffer(VkDevice device, VkPhysicalDevice physical_device, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, Buffer* buffer, VkDeviceSize size, void* data)
+	{
+		buffer->device = device;
+
+		// Create the buffer handle
+		VkBufferCreateInfo bufferCreateInfo = BufferCreateInfo(usageFlags, size);
+		if (vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer->buffer) != VK_SUCCESS) {
+
+		}
+
+		// Create the memory backing up the buffer handle
+		VkMemoryRequirements memReqs;
+		VkMemoryAllocateInfo memAlloc = MemoryAllocateInfo();
+		vkGetBufferMemoryRequirements(device, buffer->buffer, &memReqs);
+		memAlloc.allocationSize = memReqs.size;
+		// Find a memory type index that fits the properties of the buffer
+		memAlloc.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, memoryPropertyFlags, physical_device);
+		// If the buffer has VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT set we also need to enable the appropriate flag during allocation
+		VkMemoryAllocateFlagsInfoKHR allocFlagsInfo{};
+		if (usageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+			allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+			allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+			memAlloc.pNext = &allocFlagsInfo;
+		}
+		if (vkAllocateMemory(device, &memAlloc, nullptr, &buffer->memory) != VK_SUCCESS) {
+
+		}
+
+		buffer->alignment = memReqs.alignment;
+		buffer->size = size;
+		buffer->usageFlags = usageFlags;
+		buffer->memoryPropertyFlags = memoryPropertyFlags;
+
+		// If a pointer to the buffer data has been passed, map the buffer and copy over the data
+		if (data != nullptr)
+		{
+			if (buffer->Map() != VK_SUCCESS) {
+
+			}
+			memcpy(buffer->mapped, data, size);
+			if ((memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+				buffer->Flush();
+
+			buffer->Unmap();
+		}
+
+		// Initialize a default descriptor that covers the whole buffer size
+		buffer->SetupDescriptor();
+
+		// Attach the memory to the buffer object
+		return buffer->Bind();
 	}
 }

@@ -5,66 +5,49 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "vulkan/vulkan.hpp"
+#include "vulkan/vulkan.h"
 #include <iostream>
 
 namespace Diffuse {
 	class GraphicsDevice;
 	class Texture2D;
+	class TextureCubemap;
 
 	enum DescriptorBindingFlags {
 		ImageBaseColor = 0x00000001,
 		ImageNormalMap = 0x00000002
 	};
 
-	extern VkDescriptorSetLayout descriptorSetLayoutImage;
-	extern VkDescriptorSetLayout descriptorSetLayoutUbo;
-	extern VkMemoryPropertyFlags memoryPropertyFlags;
-	extern uint32_t descriptorBindingFlags;
+	//extern VkDescriptorSetLayout descriptorSetLayoutImage;
+	//extern VkDescriptorSetLayout descriptorSetLayoutUbo;
+	//extern VkMemoryPropertyFlags memoryPropertyFlags;
+	//extern uint32_t descriptorBindingFlags;
 
 	struct Node;
-
-	/*
-		glTF texture loading class
-	*/
-	struct Texture {
-		VkDevice device = nullptr;
-		VkImage image;
-		VkImageLayout imageLayout;
-		VkDeviceMemory deviceMemory;
-		VkImageView view;
-		uint32_t width, height;
-		uint32_t mipLevels;
-		uint32_t layerCount;
-		VkDescriptorImageInfo descriptor;
-		VkSampler sampler;
-		void updateDescriptor();
-		void destroy();
-		void fromglTfImage(tinygltf::Image& gltfimage, std::string path, GraphicsDevice* device, VkQueue copyQueue);
-	};
 
 	/*
 		glTF material class
 	*/
 	struct Material {
-		VkDevice device = nullptr;
+		GraphicsDevice* device = nullptr;
 		enum AlphaMode { ALPHAMODE_OPAQUE, ALPHAMODE_MASK, ALPHAMODE_BLEND };
 		AlphaMode alphaMode = ALPHAMODE_OPAQUE;
 		float alphaCutoff = 1.0f;
 		float metallicFactor = 1.0f;
 		float roughnessFactor = 1.0f;
 		glm::vec4 baseColorFactor = glm::vec4(1.0f);
-		Texture* baseColorTexture = nullptr;
-		Texture* metallicRoughnessTexture = nullptr;
-		Texture* normalTexture = nullptr;
-		Texture* occlusionTexture = nullptr;
-		Texture* emissiveTexture = nullptr;
+		Texture2D* baseColorTexture = nullptr;
+		Texture2D* metallicRoughnessTexture = nullptr;
+		Texture2D* normalTexture = nullptr;
+		Texture2D* occlusionTexture = nullptr;
+		Texture2D* emissiveTexture = nullptr;
 
-		Texture* specularGlossinessTexture;
-		Texture* diffuseTexture;
+		Texture2D* specularGlossinessTexture;
+		Texture2D* diffuseTexture;
 
 		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
-		Material(VkDevice device) : device(device) {};
+		Material(GraphicsDevice* device) : device(device) {};
 		void createDescriptorSet(VkDescriptorPool descriptorPool, VkDescriptorSetLayout descriptorSetLayout, uint32_t descriptorBindingFlags);
 	};
 
@@ -94,7 +77,7 @@ namespace Diffuse {
 		glTF mesh
 	*/
 	struct Mesh {
-		VkDevice device;
+		GraphicsDevice* device;
 
 		std::vector<Primitive*> primitives;
 		std::string name;
@@ -113,7 +96,7 @@ namespace Diffuse {
 			float jointcount{ 0 };
 		} uniformBlock;
 
-		Mesh(VkDevice device, glm::mat4 matrix);
+		Mesh(GraphicsDevice* device, glm::mat4 matrix);
 		~Mesh();
 	};
 
@@ -222,11 +205,11 @@ namespace Diffuse {
 	*/
 	class Model {
 	private:
-		Texture* getTexture(uint32_t index);
-		Texture emptyTexture;
+		Texture2D* getTexture(uint32_t index);
+		Texture2D* emptyTexture;
 		void createEmptyTexture(VkQueue transferQueue);
 	public:
-		VkDevice device;
+		GraphicsDevice* device;
 		VkDescriptorPool descriptorPool;
 
 		struct Vertices {
@@ -245,7 +228,7 @@ namespace Diffuse {
 
 		std::vector<Skin*> skins;
 
-		std::vector<Texture> textures;
+		std::vector<Texture2D*> textures;
 		std::vector<Material> materials;
 		std::vector<Animation> animations;
 
@@ -265,10 +248,10 @@ namespace Diffuse {
 		~Model();
 		void loadNode(Node* parent, const tinygltf::Node& node, uint32_t nodeIndex, const tinygltf::Model& model, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer, float globalscale);
 		void loadSkins(tinygltf::Model& gltfModel);
-		void loadImages(tinygltf::Model& gltfModel, VkDevice* device, VkQueue transferQueue);
+		void loadImages(tinygltf::Model& gltfModel, GraphicsDevice* device, VkQueue transferQueue);
 		void loadMaterials(tinygltf::Model& gltfModel);
 		void loadAnimations(tinygltf::Model& gltfModel);
-		void loadFromFile(std::string filename, VkDevice device, VkQueue transferQueue, uint32_t fileLoadingFlags = FileLoadingFlags::None, float scale = 1.0f);
+		void loadFromFile(std::string filename, GraphicsDevice* device, VkQueue transferQueue, uint32_t fileLoadingFlags = FileLoadingFlags::None, float scale = 1.0f);
 		void bindBuffers(VkCommandBuffer commandBuffer);
 		void drawNode(Node* node, VkCommandBuffer commandBuffer, uint32_t renderFlags = 0, VkPipelineLayout pipelineLayout = VK_NULL_HANDLE, uint32_t bindImageSet = 1);
 		void draw(VkCommandBuffer commandBuffer, uint32_t renderFlags = 0, VkPipelineLayout pipelineLayout = VK_NULL_HANDLE, uint32_t bindImageSet = 1);
