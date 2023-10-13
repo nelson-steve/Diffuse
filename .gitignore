@@ -1,5 +1,6 @@
 .vs/
 build/
 dependencies/
+assets/
 *.user
 *.json
