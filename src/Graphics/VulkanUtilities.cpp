@@ -253,11 +253,6 @@ namespace Diffuse {
 		}
 	}
 
-	void vkUtilities::FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
-		auto graphics = reinterpret_cast<Diffuse::GraphicsDevice*>(glfwGetWindowUserPointer(window));
-		graphics->SetFramebufferResized(true);
-	}
-
 	uint32_t vkUtilities::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physical_device) {
 		VkPhysicalDeviceMemoryProperties memProperties;
 		vkGetPhysicalDeviceMemoryProperties(physical_device, &memProperties);
@@ -298,7 +293,7 @@ namespace Diffuse {
 		vkBindBufferMemory(device, buffer, bufferMemory, 0);
 	}
 
-	void vkUtilities::CreateVertexBuffer(const std::vector<Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory, 
+	void vkUtilities::CreateVertexBuffer(const std::vector<Model::Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory, 
 		VkCommandPool command_pool, VkQueue graphics_queue, VkPhysicalDevice physical_device) {
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -321,18 +316,18 @@ namespace Diffuse {
 
 	void vkUtilities::UpdateUniformBuffers(Camera* camera, uint32_t current_image, VkExtent2D swap_chain_extent, std::vector<void*> uniform_buffers_mapped)
 	{
-		UniformBufferObject ubo{};
-		ubo.model = glm::mat4(1.0f);
-		//ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
-		//ubo.model = glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f)) * glm::scale(glm::mat4(1.0), glm::vec3(1.0));
-		//ubo.model = glm::scale(glm::mat4(1.0), glm::vec3(10.0));
-		ubo.view = camera->GetView();
-		//ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 4.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		//ubo.proj = glm::perspective(glm::radians(45.0f), swap_chain_extent.width / (float)swap_chain_extent.height, 0.1f, 10000.0f);
-		ubo.proj = camera->GetProjection();
-		ubo.proj[1][1] *= -1;
+		//UniformBufferObject ubo{};
+		//ubo.model = glm::mat4(1.0f);
+		////ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+		////ubo.model = glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f)) * glm::scale(glm::mat4(1.0), glm::vec3(1.0));
+		////ubo.model = glm::scale(glm::mat4(1.0), glm::vec3(10.0));
+		//ubo.view = camera->GetView();
+		////ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 4.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		////ubo.proj = glm::perspective(glm::radians(45.0f), swap_chain_extent.width / (float)swap_chain_extent.height, 0.1f, 10000.0f);
+		//ubo.proj = camera->GetProjection();
+		//ubo.proj[1][1] *= -1;
 
-		memcpy(uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
+		//memcpy(uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
 	}
 
 	void vkUtilities::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool command_pool, VkDevice device, VkQueue graphics_queue) {
