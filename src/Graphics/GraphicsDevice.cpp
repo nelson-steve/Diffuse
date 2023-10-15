@@ -142,7 +142,6 @@ namespace Diffuse {
         device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
         device_create_info.pEnabledFeatures = &device_features;
-        device_create_info.enabledExtensionCount = 0;
         device_create_info.enabledExtensionCount = static_cast<uint32_t>(config.required_device_extensions.size());
         device_create_info.ppEnabledExtensionNames = config.required_device_extensions.data();
         if (config.enable_validation_layers) {
@@ -160,18 +159,20 @@ namespace Diffuse {
 
         //		--Create Swap Chain--
         SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
+        //VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
         VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
         VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swap_chain_support.presentModes);
         VkExtent2D extent = vkUtilities::ChooseSwapExtent(swap_chain_support.capabilities, m_window->window());
-        uint32_t image_count = swap_chain_support.capabilities.minImageCount + 2;
+        uint32_t image_count = swap_chain_support.capabilities.minImageCount + 1;
         if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount) {
             image_count = swap_chain_support.capabilities.maxImageCount;
         }
+        VkFormat _format = VK_FORMAT_B8G8R8A8_UNORM;
         VkSwapchainCreateInfoKHR swap_chain_create_info{};
         swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         swap_chain_create_info.surface = m_surface;
         swap_chain_create_info.minImageCount = image_count;
-        swap_chain_create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+        swap_chain_create_info.imageFormat = _format;
         swap_chain_create_info.imageColorSpace = surfaceFormat.colorSpace;
         swap_chain_create_info.imageExtent = extent;
         swap_chain_create_info.imageArrayLayers = 1;
@@ -199,7 +200,7 @@ namespace Diffuse {
         m_swap_chain_images.resize(image_count);
         vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, m_swap_chain_images.data());
 
-        m_swap_chain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
+        m_swap_chain_image_format = _format;
         m_swap_chain_extent = extent;
 
         // Create Image Views
@@ -210,7 +211,7 @@ namespace Diffuse {
             image_views_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             image_views_create_info.image = m_swap_chain_images[i];
             image_views_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            image_views_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+            image_views_create_info.format = _format;
             image_views_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
             image_views_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             image_views_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -228,7 +229,7 @@ namespace Diffuse {
 #if 1
         // Create Render Pass
         VkAttachmentDescription color_attachment{};
-        color_attachment.format = m_swap_chain_image_format;
+        color_attachment.format = _format;
         color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
         color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -341,7 +342,7 @@ namespace Diffuse {
 #endif
 
         // Create Command Buffers
-        m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+        m_command_buffers.resize(m_framebuffers.size());
         VkCommandBufferAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         alloc_info.commandPool = m_command_pool;
@@ -791,7 +792,7 @@ namespace Diffuse {
         //BuildCommandBuffers();
     }
 
-    void GraphicsDevice::BuildCommandBuffers()
+    void GraphicsDevice::BuildCommandBuffers(uint32_t image_index)
     {
         VkCommandBufferBeginInfo cmdBufInfo = CommandBufferBeginInfo();
 
@@ -808,10 +809,11 @@ namespace Diffuse {
         renderPassBeginInfo.clearValueCount = 2;
         renderPassBeginInfo.pClearValues = clearValues;
 
-        for (size_t i = 0; i < m_command_buffers.size(); ++i)
+        //for (size_t i = 0; i < m_command_buffers.size(); ++i)
         {
+            int i = m_current_frame;
             // Set target frame buffer
-            renderPassBeginInfo.framebuffer = m_framebuffers[i];
+            renderPassBeginInfo.framebuffer = m_framebuffers[image_index];
 
             if (vkBeginCommandBuffer(m_command_buffers[i], &cmdBufInfo) != VK_SUCCESS) {
                 LOG_ERROR(false, "Failed to create graphics pipeline!");
@@ -826,7 +828,7 @@ namespace Diffuse {
             vkCmdSetScissor(m_command_buffers[i], 0, 1, &scissor);
 
             // Skybox
-            bool displaySkybox = true;
+            bool displaySkybox = false;
             if (displaySkybox)
             {
                 vkCmdBindDescriptorSets(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets.skybox, 0, NULL);
@@ -2112,7 +2114,7 @@ namespace Diffuse {
         vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame], /*VkCommandBufferResetFlagBits*/ 0);
-        //BuildCommandBuffers();
+        BuildCommandBuffers(imageIndex);
         //vkUtilities::RecordCommandBuffer(model, nullptr, m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_framebuffers,
         //    m_graphics_pipeline, nullptr, nullptr, 0, m_pipeline_layout, m_current_frame);
 

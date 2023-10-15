@@ -165,7 +165,7 @@ namespace Diffuse {
         void CreateSwapchain();
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         void RecreateSwapchain();
-        void BuildCommandBuffers();
+        void BuildCommandBuffers(uint32_t image_index);
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
 
@@ -230,7 +230,7 @@ namespace Diffuse {
         //int m_indices_size;
         int m_current_frame = 0;
         bool m_framebuffer_resized = false;
-        const int MAX_FRAMES_IN_FLIGHT = 1;
+        const int MAX_FRAMES_IN_FLIGHT = 2;
         //const int m_numFrames = 1;
         uint32_t m_renderSamples;
 
