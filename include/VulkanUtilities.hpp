@@ -30,7 +30,7 @@ namespace Diffuse {
 	};
 	class vkUtilities {
 	public:
-		static bool CheckValidationLayerSupport();
+		static bool CheckValidationLayerSupport(const std::vector<const char*> validation_layers);
 		static std::vector<const char*> GetRequiredExtensions(bool enableValidationLayers);
 		static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,

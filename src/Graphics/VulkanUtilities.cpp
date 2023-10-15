@@ -12,8 +12,25 @@
 #include <string>
 
 namespace Diffuse {
-	bool vkUtilities::CheckValidationLayerSupport() {
-		return false;
+	bool vkUtilities::CheckValidationLayerSupport(const std::vector<const char*> validation_layers) {
+		uint32_t layer_count;
+		vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
+
+		std::vector<VkLayerProperties> availableLayers(layer_count);
+		vkEnumerateInstanceLayerProperties(&layer_count, availableLayers.data());
+		for (const char* layerName : validation_layers) {
+			bool layerFound = false;
+			for (const auto& layerProperties : availableLayers) {
+				if (strcmp(layerName, layerProperties.layerName) == 0) {
+					layerFound = true;
+					break;
+				}
+			}
+			if (!layerFound) {
+				return false;
+			}
+		}
+		return true;
 	}
 	bool vkUtilities::CheckDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<const char*>& device_extensions) {
 		uint32_t extensionCount;

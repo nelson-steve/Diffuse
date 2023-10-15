@@ -31,18 +31,20 @@ namespace Diffuse {
 
     GraphicsDevice::GraphicsDevice(Config config) {
         // === Initializing GLFW ===
-        int result = glfwInit();
-        LOG_ERROR(result == GLFW_TRUE, "Failed to intitialize GLFW");
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-        m_window = std::make_unique<Window>();
-        glfwSetWindowUserPointer(m_window->window(), this);
-        glfwSetFramebufferSizeCallback(m_window->window(), FramebufferResizeCallback);
+        {
+            int result = glfwInit();
+            LOG_ERROR(result == GLFW_TRUE, "Failed to intitialize GLFW");
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+            m_window = std::make_unique<Window>();
+            glfwSetWindowUserPointer(m_window->window(), this);
+            glfwSetFramebufferSizeCallback(m_window->window(), FramebufferResizeCallback);
+        }
         // ============================
 
         // === Create Vulkan Instancee ===
         
-        if (!vkUtilities::CheckValidationLayerSupport()) {
+        if (config.enable_validation_layers && !vkUtilities::CheckValidationLayerSupport(config.validation_layers)) {
         	std::cout << "validation layers requested, but not available!";
         	assert(false);
         }
@@ -55,28 +57,26 @@ namespace Diffuse {
         app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
         app_info.apiVersion = VK_API_VERSION_1_0;
 
-        std::vector<const char*> extensions = vkUtilities::GetRequiredExtensions(false); // TODO: add a boolean for if validation layers is enabled
-
-        // TODO: Use multiple validation layers as a backup 
-        const std::vector<const char*> validation_layers = {
-            "VK_LAYER_KHRONOS_validation",
-        };
+        std::vector<const char*> extensions = vkUtilities::GetRequiredExtensions(config.enable_validation_layers); // TODO: add a boolean for if validation layers is enabled
 
         VkInstanceCreateInfo instance_create_info{};
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instance_create_info.pApplicationInfo = &app_info;
         instance_create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
         instance_create_info.ppEnabledExtensionNames = extensions.data();
-        instance_create_info.enabledLayerCount = static_cast<uint32_t>(config.validation_layers.size());
-        instance_create_info.ppEnabledLayerNames = config.validation_layers.data();
-
+        // TODO: Use multiple validation layers as a backup 
         if (config.enable_validation_layers) {
-            VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
+            instance_create_info.enabledLayerCount = static_cast<uint32_t>(config.validation_layers.size());
+            instance_create_info.ppEnabledLayerNames = config.validation_layers.data();
+        }
+
+        VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
+        if (config.enable_validation_layers) {
             debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
             debug_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
             debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-            //debug_create_info.pfnUserCallback = vkUtilities::DebugCallback;
-            //vkUtilities::PopulateDebugMessengerCreateInfo(debug_create_info);
+            vkUtilities::PopulateDebugMessengerCreateInfo(debug_create_info);
+        
             instance_create_info.pNext = &debug_create_info;
         }
 
@@ -86,10 +86,7 @@ namespace Diffuse {
         // ===============================        
         // --Setup Debug Messenger--
         if (config.enable_validation_layers) {
-            VkDebugUtilsMessengerCreateInfoEXT messenger_create_info;
-            vkUtilities::PopulateDebugMessengerCreateInfo(messenger_create_info);
-
-            if (vkUtilities::CreateDebugUtilsMessengerEXT(m_instance, &messenger_create_info, nullptr, &m_debug_messenger) != VK_SUCCESS) {
+            if (vkUtilities::CreateDebugUtilsMessengerEXT(m_instance, &debug_create_info, nullptr, &m_debug_messenger) != VK_SUCCESS) {
                 LOG_WARN(false, "**Failed to set up debug messenger**");
             }
         }

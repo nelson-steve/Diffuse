@@ -14,12 +14,12 @@
 
 namespace Diffuse {
     struct Config {
-        bool enable_validation_layers = false;
+        bool enable_validation_layers = true;
         const std::vector<const char*> validation_layers = {
             "VK_LAYER_KHRONOS_validation"
         };
         const std::vector<const char*> required_device_extensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            VK_EXT_DEBUG_REPORT_EXTENSION_NAME
         };
     };
 
