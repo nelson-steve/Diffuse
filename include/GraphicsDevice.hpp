@@ -107,6 +107,7 @@ namespace Diffuse {
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
         std::unordered_map<std::string, VkPipeline> pipelines;
+        VkDebugUtilsMessengerCreateInfoEXT m_debug_create_info;
         VkPipeline boundPipeline;
 
         struct DescriptorSetLayouts {
