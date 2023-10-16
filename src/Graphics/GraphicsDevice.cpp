@@ -123,10 +123,10 @@ namespace Diffuse {
             std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
             std::set<uint32_t> unique_queue_families = { indices.graphicsFamily.value(), indices.presentFamily.value() };
             float queue_priority = 1.0f;
-            for (uint32_t queueFamily : unique_queue_families) {
+            for (uint32_t queue_family : unique_queue_families) {
                 VkDeviceQueueCreateInfo queue_create_info{};
                 queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                queue_create_info.queueFamilyIndex = queueFamily;
+                queue_create_info.queueFamilyIndex = queue_family;
                 queue_create_info.queueCount = 1;
                 queue_create_info.pQueuePriorities = &queue_priority;
                 queue_create_infos.push_back(queue_create_info);
@@ -361,9 +361,9 @@ namespace Diffuse {
 
         // === Create Sync Obects ===
         {
-            renderCompleteSemaphores.resize(m_render_ahead);
-            presentCompleteSemaphores.resize(m_render_ahead);
-            waitFences.resize(m_render_ahead);
+            m_render_complete_semaphores.resize(m_render_ahead);
+            m_present_complete_semaphores.resize(m_render_ahead);
+            m_wait_fences.resize(m_render_ahead);
 
             VkSemaphoreCreateInfo semaphore_info{};
             semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -373,9 +373,9 @@ namespace Diffuse {
             fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
             for (size_t i = 0; i < m_render_ahead; i++) {
-                if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &renderCompleteSemaphores[i]) != VK_SUCCESS ||
-                    vkCreateSemaphore(m_device, &semaphore_info, nullptr, &presentCompleteSemaphores[i]) != VK_SUCCESS ||
-                    vkCreateFence(m_device, &fence_info, nullptr, &waitFences[i]) != VK_SUCCESS) {
+                if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_complete_semaphores[i]) != VK_SUCCESS ||
+                    vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_present_complete_semaphores[i]) != VK_SUCCESS ||
+                    vkCreateFence(m_device, &fence_info, nullptr, &m_wait_fences[i]) != VK_SUCCESS) {
                     LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
                 }
             }
@@ -564,10 +564,10 @@ namespace Diffuse {
 
     void GraphicsDevice::Draw(Camera* camera) {
 
-        vkWaitForFences(m_device, 1, &waitFences[m_current_frame_index], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(m_device, 1, &m_wait_fences[m_current_frame_index], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, renderCompleteSemaphores[m_current_frame_index], VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_render_complete_semaphores[m_current_frame_index], VK_NULL_HANDLE, &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             RecreateSwapchain();
@@ -579,7 +579,7 @@ namespace Diffuse {
 
         //vkUtilities::UpdateUniformBuffers(camera, m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
 
-        vkResetFences(m_device, 1, &waitFences[m_current_frame_index]);
+        vkResetFences(m_device, 1, &m_wait_fences[m_current_frame_index]);
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame_index], /*VkCommandBufferResetFlagBits*/ 0);
         //vkUtilities::RecordCommandBuffer(model, nullptr, m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_framebuffers,
@@ -588,7 +588,7 @@ namespace Diffuse {
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = { presentCompleteSemaphores[m_current_frame_index] };
+        VkSemaphore waitSemaphores[] = { m_present_complete_semaphores[m_current_frame_index] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -597,11 +597,11 @@ namespace Diffuse {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &m_command_buffers[m_current_frame_index];
 
-        VkSemaphore signalSemaphores[] = { renderCompleteSemaphores[m_current_frame_index] };
+        VkSemaphore signalSemaphores[] = { m_render_complete_semaphores[m_current_frame_index] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(m_graphics_queue, 1, &submitInfo, waitFences[m_current_frame_index]) != VK_SUCCESS) {
+        if (vkQueueSubmit(m_graphics_queue, 1, &submitInfo, m_wait_fences[m_current_frame_index]) != VK_SUCCESS) {
             LOG_ERROR(false, "failed to submit draw command buffer!");
         }
 
@@ -732,7 +732,7 @@ namespace Diffuse {
         for (size_t i = 0; i < 1; i++) {
             //vkDestroySemaphore(m_device, m_render_finished_semaphores[i], nullptr);
             //vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
-            vkDestroyFence(m_device, waitFences[i], nullptr);
+            vkDestroyFence(m_device, m_wait_fences[i], nullptr);
         }
 
         vkDestroyCommandPool(m_device, m_command_pool, nullptr);

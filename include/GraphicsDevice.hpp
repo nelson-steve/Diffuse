@@ -19,7 +19,7 @@ namespace Diffuse {
             "VK_LAYER_KHRONOS_validation"
         };
         const std::vector<const char*> required_device_extensions = {
-            VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
     };
 
@@ -106,8 +106,8 @@ namespace Diffuse {
         std::vector<VkFramebuffer>      m_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
-        std::unordered_map<std::string, VkPipeline> pipelines;
         VkDebugUtilsMessengerCreateInfoEXT m_debug_create_info;
+        std::unordered_map<std::string, VkPipeline> pipelines;
         VkPipeline boundPipeline;
 
         struct DescriptorSetLayouts {
@@ -122,11 +122,11 @@ namespace Diffuse {
             VkDescriptorSet scene;
             VkDescriptorSet skybox;
         };
-        std::vector<VkFence> waitFences;
+        std::vector<VkFence> m_wait_fences;
         std::vector<DescriptorSets> descriptorSets;
         std::vector<VkCommandBuffer> commandBuffers;
-        std::vector<VkSemaphore> renderCompleteSemaphores;
-        std::vector<VkSemaphore> presentCompleteSemaphores;
+        std::vector<VkSemaphore> m_render_complete_semaphores;
+        std::vector<VkSemaphore> m_present_complete_semaphores;
 
         // Other variables
         uint32_t m_current_frame_index = 0;
