@@ -53,9 +53,14 @@ namespace Diffuse {
         VkPhysicalDevice PhysicalDevice() const { return m_physical_device; }
 
         void Draw(Camera* camera);
+        void DrawNode(Node* node, VkCommandBuffer commandBuffer);
 
-        void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Model::Vertex> vertices);
-        void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> vertices);
+        void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
+        void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);
+
+        void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
+        void CreateGraphicsPipeline();
+
         // Swapchain
         void CreateSwapchain();
         void RecreateSwapchain();
@@ -69,6 +74,7 @@ namespace Diffuse {
 
         //friend class Model;
         //friend class Texture2D;
+        std::vector<Model*> m_models;
 
     private:
         std::shared_ptr<Window>         m_window;
@@ -107,8 +113,8 @@ namespace Diffuse {
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
         VkDebugUtilsMessengerCreateInfoEXT m_debug_create_info;
-        std::unordered_map<std::string, VkPipeline> pipelines;
-        VkPipeline boundPipeline;
+        //std::unordered_map<std::string, VkPipeline> pipelines;
+        //VkPipeline boundPipeline;
 
         struct DescriptorSetLayouts {
             VkDescriptorSetLayout empty;
@@ -117,6 +123,10 @@ namespace Diffuse {
             VkDescriptorSetLayout node;
             VkDescriptorSetLayout materialBuffer;
         } m_descriptorSetLayouts;
+
+        struct Pipelines {
+            VkPipeline default_;
+        } m_pipelines;
 
         struct DescriptorSets {
             VkDescriptorSet scene;

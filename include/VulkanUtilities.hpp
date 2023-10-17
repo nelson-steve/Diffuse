@@ -51,7 +51,7 @@ namespace Diffuse {
 		static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physical_device);
 		static void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory, 
 			VkPhysicalDevice physical_device, VkDevice device);
-		static void CreateVertexBuffer(const std::vector<Model::Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory,
+		static void CreateVertexBuffer(const std::vector<Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory,
 			VkCommandPool command_pool, VkQueue graphics_queue, VkPhysicalDevice physical_device);
 		static 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool command_pool, VkDevice device, VkQueue graphics_queue);
 		static void UpdateUniformBuffers(Camera* camera, uint32_t current_image, VkExtent2D swap_chain_extent, std::vector<void*> uniform_buffers_mapped);

@@ -400,11 +400,29 @@ namespace Diffuse {
         if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
             throw std::runtime_error("Failed to create descriptor pool");
         }
+
+        //VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+        //descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        //descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
+        //descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
+        //VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.scene));
+        //const std::vector<VkDescriptorSetLayout> setLayouts = {
+        //descriptorSetLayouts.scene, descriptorSetLayouts.material, descriptorSetLayouts.node, descriptorSetLayouts.materialBuffer
+        //};
+        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
+        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutCI.setLayoutCount = 0;
+        //pipelineLayoutCI.pSetLayouts = setLayouts.data();
+        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create pipeline layout!");
+        }
+
+        CreateGraphicsPipeline();
         // SUCCESS
     }
 
-    void GraphicsDevice::CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, const std::vector<Model::Vertex> vertices) {
-        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    void GraphicsDevice::CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices) {
+        VkDeviceSize bufferSize = buffer_size;
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -412,7 +430,7 @@ namespace Diffuse {
 
         void* data;
         vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, vertices.data(), (size_t)bufferSize);
+        memcpy(data, vertices, (size_t)bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
         vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer, vertex_buffer_memory, m_physical_device, m_device);
@@ -422,9 +440,9 @@ namespace Diffuse {
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
-    void GraphicsDevice::CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, const std::vector<uint32_t> indices) {
+    void GraphicsDevice::CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices) {
         //m_indices_size = indices.size();
-        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+        VkDeviceSize bufferSize = buffer_size;
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -432,7 +450,7 @@ namespace Diffuse {
 
         void* data;
         vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, indices.data(), (size_t)bufferSize);
+        memcpy(data, indices, (size_t)bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
         vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer, index_buffer_memory, m_physical_device, m_device);
@@ -445,11 +463,11 @@ namespace Diffuse {
 
 
 
-#if 0
+#if 1
     void GraphicsDevice::CreateGraphicsPipeline() {
         // Create Graphics Pipeline
-        auto vert_shader_code = Utils::File::ReadFile("../shaders/basic/vert.spv");
-        auto frag_shader_code = Utils::File::ReadFile("../shaders/basic/frag.spv");
+        auto vert_shader_code = Utils::File::ReadFile("../shaders/basic/basic_vert.spv");
+        auto frag_shader_code = Utils::File::ReadFile("../shaders/basic/basic_frag.spv");
 
         VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
         VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
@@ -471,13 +489,23 @@ namespace Diffuse {
         VkPipelineVertexInputStateCreateInfo vertex_input_info{};
         vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        auto bindingDescription = Vertex::getBindingDescription();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        //auto bindingDescription = Vertex::getBindingDescription();
+        //auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        VkVertexInputBindingDescription vertex_input_binding = { 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX };
+        std::vector<VkVertexInputAttributeDescription> vertexInputAttributes = {
+            { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            { 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3 },
+            { 2, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 6 },
+            { 3, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 8 },
+            { 4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 10 }
+            //{ 5, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 14 },
+            //{ 6, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 18 }
+        };
 
         vertex_input_info.vertexBindingDescriptionCount = 1;
-        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        vertex_input_info.pVertexBindingDescriptions = &bindingDescription;
-        vertex_input_info.pVertexAttributeDescriptions = attributeDescriptions.data();
+        vertex_input_info.pVertexBindingDescriptions = &vertex_input_binding;
+        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexInputAttributes.size());
+        vertex_input_info.pVertexAttributeDescriptions = vertexInputAttributes.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -553,7 +581,7 @@ namespace Diffuse {
         pipeline_info.subpass = 0;
         pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_pipelines.default_) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create graphics pipeline!");
         }
 
@@ -582,13 +610,14 @@ namespace Diffuse {
         vkResetFences(m_device, 1, &m_wait_fences[m_current_frame_index]);
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame_index], /*VkCommandBufferResetFlagBits*/ 0);
-        //vkUtilities::RecordCommandBuffer(model, nullptr, m_command_buffers[m_current_frame], imageIndex, m_render_pass, m_swap_chain_extent, m_framebuffers,
+        RecordCommandBuffer(m_command_buffers[m_current_frame_index], imageIndex);
+        //vkUtilities::RecordCommandBuffer(model, nullptr, m_command_buffers[m_current_frame_index], imageIndex, m_render_pass, m_swap_chain_extent, m_framebuffers,
         //    m_graphics_pipeline, nullptr, nullptr, 0, m_pipeline_layout, m_current_frame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = { m_present_complete_semaphores[m_current_frame_index] };
+        VkSemaphore waitSemaphores[] = { m_render_complete_semaphores[m_current_frame_index] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -597,7 +626,7 @@ namespace Diffuse {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &m_command_buffers[m_current_frame_index];
 
-        VkSemaphore signalSemaphores[] = { m_render_complete_semaphores[m_current_frame_index] };
+        VkSemaphore signalSemaphores[] = { m_present_complete_semaphores[m_current_frame_index] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -631,8 +660,76 @@ namespace Diffuse {
         m_current_frame_index = (m_current_frame_index + 1) % m_render_ahead;
     }
 
-    void GraphicsDevice::CreateSwapchain()
-    {
+    void GraphicsDevice::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index) {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(command_buffer, &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording command buffer!");
+        }
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = m_render_pass;
+        renderPassInfo.framebuffer = m_framebuffers[image_index];
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = m_swap_chain_extent;
+
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+        clearValues[1].depthStencil = { 1.0f, 0 };
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
+
+        vkCmdBeginRenderPass(command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = (float)m_swap_chain_extent.width;
+        viewport.height = (float)m_swap_chain_extent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = m_swap_chain_extent;
+        vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+        //vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
+        {
+            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.default_);
+            VkBuffer vertexBuffers[] = { m_models[0]->m_vertices.buffer };
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(command_buffer, m_models[0]->m_indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+            for (auto& node : m_models[0]->GetNodes()) {
+            	DrawNode(node, command_buffer);
+            }
+        }
+
+        vkCmdEndRenderPass(command_buffer);
+        //
+        if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to record command buffer!");
+        }
+    }
+
+    void GraphicsDevice::DrawNode(Node* node, VkCommandBuffer commandBuffer) {
+        if (node->mesh) {
+            for (Primitive* primitive : node->mesh->primitives) {
+                vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
+            }
+        }
+        for (auto& child : node->children) {
+            DrawNode(child, commandBuffer);
+        }
+    }
+
+    void GraphicsDevice::CreateSwapchain() {
         //		--Create Swap Chain--
         SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
 

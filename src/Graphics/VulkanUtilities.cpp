@@ -246,14 +246,14 @@ namespace Diffuse {
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 		{
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-			VkBuffer vertexBuffers[] = { model->vertices.buffer };
+			//VkBuffer vertexBuffers[] = { model->m_vertices.buffer };
 			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(command_buffer, model->indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+			//vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+			//vkCmdBindIndexBuffer(command_buffer, model->indices.buffer, 0, VK_INDEX_TYPE_UINT32);
 			
-			for (auto& node : model->nodes) {
-				DrawNode(model, command_buffer, pipeline_layout);
-			}
+			//for (auto& node : model->nodes) {
+			//	DrawNode(model, command_buffer, pipeline_layout);
+			//}
 		}
 
 		vkCmdEndRenderPass(command_buffer);
@@ -310,7 +310,7 @@ namespace Diffuse {
 		vkBindBufferMemory(device, buffer, bufferMemory, 0);
 	}
 
-	void vkUtilities::CreateVertexBuffer(const std::vector<Model::Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory, 
+	void vkUtilities::CreateVertexBuffer(const std::vector<Vertex>& vertices, VkDevice device, VkBuffer vertex_buffer, VkDeviceMemory vertex_buffer_memory, 
 		VkCommandPool command_pool, VkQueue graphics_queue, VkPhysicalDevice physical_device) {
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
