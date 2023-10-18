@@ -71,6 +71,66 @@ namespace Diffuse {
         void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
 
+        VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin = false)
+        {
+            VkCommandBufferAllocateInfo cmdBufAllocateInfo{};
+            cmdBufAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            cmdBufAllocateInfo.commandPool = m_command_pool;
+            cmdBufAllocateInfo.level = level;
+            cmdBufAllocateInfo.commandBufferCount = 1;
+
+            VkCommandBuffer cmdBuffer;
+            if (vkAllocateCommandBuffers(m_device, &cmdBufAllocateInfo, &cmdBuffer) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            // If requested, also start recording for the new command buffer
+            if (begin) {
+                VkCommandBufferBeginInfo commandBufferBI{};
+                commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                if (vkBeginCommandBuffer(cmdBuffer, &commandBufferBI) != VK_SUCCESS) {
+                    assert(false);
+                }
+            }
+
+            return cmdBuffer;
+        }
+
+        void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free = true)
+        {
+            if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &commandBuffer;
+
+            // Create fence to ensure that the command buffer has finished executing
+            VkFenceCreateInfo fenceInfo{};
+            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            VkFence fence;
+            if (vkCreateFence(m_device, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            // Submit to the queue
+            if (vkQueueSubmit(queue, 1, &submitInfo, fence) != VK_SUCCESS) {
+                assert(false);
+            }
+            // Wait for the fence to signal that command buffer has finished executing
+            if (vkWaitForFences(m_device, 1, &fence, VK_TRUE, 100000000000) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            vkDestroyFence(m_device, fence, nullptr);
+
+            if (free) {
+                vkFreeCommandBuffers(m_device, m_command_pool, 1, &commandBuffer);
+            }
+        }
+
         // Swapchain
         void RecreateSwapchain();
 

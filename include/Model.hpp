@@ -11,6 +11,8 @@
 namespace Diffuse {
 
 	class GraphicsDevice;
+	class Texture2D;
+	struct TextureSampler;
 
 	struct Vertex {
 		glm::vec3 pos;
@@ -20,12 +22,30 @@ namespace Diffuse {
 		glm::vec4 color;
 	};
 
+	struct Texture {
+		GraphicsDevice* device;
+		VkImage image;
+		VkImageLayout imageLayout;
+		VkDeviceMemory deviceMemory;
+		VkImageView view;
+		uint32_t width, height;
+		uint32_t mipLevels;
+		uint32_t layerCount;
+		VkDescriptorImageInfo descriptor;
+		VkSampler sampler;
+		void updateDescriptor();
+		void destroy();
+		// Load a texture from a glTF image (stored as vector of chars loaded via stb_image) and generate a full mip chaing for it
+		void fromglTfImage(tinygltf::Image& gltfimage, TextureSampler textureSampler, GraphicsDevice* device, VkQueue copyQueue);
+	};
+
+
 	struct Primitive {
-		uint32_t first_index;
-		uint32_t index_count;
-		uint32_t vertex_count;
+		uint32_t first_index = 0;
+		uint32_t index_count = 0;
+		uint32_t vertex_count = 0;
 		//Material& material;
-		bool has_indices;
+		bool has_indices = false;
 		Primitive(uint32_t _first_index, uint32_t _index_count, uint32_t _vertex_count)
 			:first_index(_first_index), index_count(_index_count), vertex_count(_vertex_count) {}
 	};
@@ -61,7 +81,7 @@ namespace Diffuse {
 	private:
 		std::vector<Node*> m_nodes;
 		std::vector<Node*> m_linear_nodes;
-
+		std::vector<Texture2D*> m_textures;
 		uint32_t* m_index_buffer;
 		Vertex* m_vertex_buffer;
 		uint32_t m_vertex_pos = 0;

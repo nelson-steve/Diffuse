@@ -31,6 +31,27 @@ namespace Diffuse {
 		uint32_t index_count = 0;
 		if (file_loaded) {
 			// TODO: Load material data
+			// Load Textures
+			for (tinygltf::Texture& tex : model.textures) {
+				tinygltf::Image image = model.images[tex.source];
+				TextureSampler texture_sampler;
+				//if (tex.sampler == -1) 
+				{
+					// No sampler specified, use a default one
+					texture_sampler.mag_filter = VK_FILTER_LINEAR;
+					texture_sampler.min_filter = VK_FILTER_LINEAR;
+					texture_sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+					texture_sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+					texture_sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				}
+				//else {
+				//	textureSampler = textureSamplers[tex.sampler];
+				//}
+				Texture2D* texture;
+				texture = new Texture2D(image, texture_sampler, device->Queue(), device);
+				m_textures.push_back(texture);
+			}
+
 			const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 			for (auto& node_index : scene.nodes) {
 				GetNodeProps(model.nodes[node_index], model, vertex_count, index_count);
