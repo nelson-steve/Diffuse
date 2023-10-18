@@ -155,80 +155,6 @@ namespace Diffuse {
             vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_present_queue);
         }
 
-        //SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
-        //VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
-#if 0
-        {
-            VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swap_chain_support.presentModes);
-            VkExtent2D extent = vkUtilities::ChooseSwapExtent(swap_chain_support.capabilities, m_window->window());
-            uint32_t image_count = swap_chain_support.capabilities.minImageCount + 1;
-            if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount) {
-                image_count = swap_chain_support.capabilities.maxImageCount;
-            }
-            VkSwapchainCreateInfoKHR swap_chain_create_info{};
-            swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-            swap_chain_create_info.surface = m_surface;
-            swap_chain_create_info.minImageCount = image_count;
-            swap_chain_create_info.imageFormat = surfaceFormat.format;
-            swap_chain_create_info.imageColorSpace = surfaceFormat.colorSpace;
-            swap_chain_create_info.imageExtent = extent;
-            swap_chain_create_info.imageArrayLayers = 1;
-            swap_chain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-            QueueFamilyIndices queue_familt_indices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
-            uint32_t queueFamilyIndices[] = { queue_familt_indices.graphicsFamily.value(), queue_familt_indices.presentFamily.value() };
-            if (queue_familt_indices.graphicsFamily != queue_familt_indices.presentFamily) {
-                swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-                swap_chain_create_info.queueFamilyIndexCount = 2;
-                swap_chain_create_info.pQueueFamilyIndices = queueFamilyIndices;
-            }
-            else {
-                swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            }
-            swap_chain_create_info.preTransform = swap_chain_support.capabilities.currentTransform;
-            swap_chain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-            swap_chain_create_info.presentMode = presentMode;
-            swap_chain_create_info.clipped = VK_TRUE;
-            swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
-            if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create swap chain!");
-            }
-
-            vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, nullptr);
-            m_swap_chain_images.resize(image_count);
-            vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, m_swap_chain_images.data());
-
-            m_swap_chain_image_format = surfaceFormat.format;
-            m_swap_chain_extent = extent;
-        }
-        
-
-        // === Create Image Views ===
-        {
-            m_swap_chain_image_views.resize(m_swap_chain_images.size());
-
-            for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
-                VkImageViewCreateInfo image_views_create_info{};
-                image_views_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-                image_views_create_info.image = m_swap_chain_images[i];
-                image_views_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-                image_views_create_info.format = m_swap_chain_image_format;
-                image_views_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-                image_views_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-                image_views_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-                image_views_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-                image_views_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                image_views_create_info.subresourceRange.baseMipLevel = 0;
-                image_views_create_info.subresourceRange.levelCount = 1;
-                image_views_create_info.subresourceRange.baseArrayLayer = 0;
-                image_views_create_info.subresourceRange.layerCount = 1;
-
-                if (vkCreateImageView(m_device, &image_views_create_info, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
-                    LOG_ERROR(false, "Failed to create image views!");
-                }
-            }
-        }
-#endif
-
         // Create Command Pool
         {
             QueueFamilyIndices queueFamilyIndices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
@@ -241,19 +167,6 @@ namespace Diffuse {
                 LOG_ERROR(false, "Failed to create command pool!");
             }
         }
-
-        // Create Uniform Buffers
-        //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-        //
-        //m_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
-        //m_uniform_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT);
-        //m_uniform_buffers_mapped.resize(MAX_FRAMES_IN_FLIGHT);
-        //
-        //for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        //    vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffers[i], m_uniform_buffers_memory[i], m_physical_device, m_device);
-        //
-        //    vkMapMemory(m_device, m_uniform_buffers_memory[i], 0, bufferSize, 0, &m_uniform_buffers_mapped[i]);
-        //}
 
         // === Create Sync Obects ===
         {
@@ -478,7 +391,6 @@ namespace Diffuse {
         vkUnmapMemory(m_device, stagingBufferMemory);
 
         vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer, vertex_buffer_memory, m_physical_device, m_device);
-
         vkUtilities::CopyBuffer(stagingBuffer, vertex_buffer, bufferSize, m_command_pool, m_device, m_graphics_queue);
 
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
@@ -645,30 +557,32 @@ namespace Diffuse {
     }
 
     void GraphicsDevice::Draw(Camera* camera) {
-
         vkWaitForFences(m_device, 1, &m_wait_fences[m_current_frame_index], VK_TRUE, UINT64_MAX);
+
+        if (m_framebuffer_resized) {
+            RecreateSwapchain();
+            m_framebuffer_resized = false;
+            return;
+        }
 
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain->GetSwapchain(), UINT64_MAX, m_render_complete_semaphores[m_current_frame_index], VK_NULL_HANDLE, &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             RecreateSwapchain();
+            m_framebuffer_resized = false;
             return;
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
             LOG_ERROR(false, "Failed to acquire swap chain image!");
         }
 
-        //vkUtilities::UpdateUniformBuffers(camera, m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
+        // Updating uniform buffers
         {
             UBO ubo{};
             ubo.model = glm::mat4(1.0);
             ubo.view = camera->GetView();
             ubo.proj = camera->GetProjection();
-            //ubo.model = glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            //ubo.proj = glm::perspective(glm::radians(45.0f), m_swap_chain_extent.width / (float)m_swap_chain_extent.height, 0.1f, 10.0f);
-            //ubo.proj[1][1] *= -1;
 
             memcpy(m_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
         }
@@ -677,8 +591,6 @@ namespace Diffuse {
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame_index], /*VkCommandBufferResetFlagBits*/ 0);
         RecordCommandBuffer(m_command_buffers[m_current_frame_index], imageIndex);
-        //vkUtilities::RecordCommandBuffer(model, nullptr, m_command_buffers[m_current_frame_index], imageIndex, m_render_pass, m_swap_chain_extent, m_framebuffers,
-        //    m_graphics_pipeline, nullptr, nullptr, 0, m_pipeline_layout, m_current_frame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -729,7 +641,6 @@ namespace Diffuse {
     void GraphicsDevice::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index) {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
         if (vkBeginCommandBuffer(command_buffer, &beginInfo) != VK_SUCCESS) {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
@@ -778,7 +689,7 @@ namespace Diffuse {
         }
 
         vkCmdEndRenderPass(command_buffer);
-        //
+
         if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
         }
@@ -795,58 +706,6 @@ namespace Diffuse {
         }
     }
 
-    void GraphicsDevice::CreateSwapchain() {
-        //		--Create Swap Chain--
-        SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
-
-        VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
-        VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swap_chain_support.presentModes);
-        VkExtent2D extent = vkUtilities::ChooseSwapExtent(swap_chain_support.capabilities, m_window->window());
-
-        uint32_t image_count = swap_chain_support.capabilities.minImageCount + 1;
-        if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount) {
-            image_count = swap_chain_support.capabilities.maxImageCount;
-        }
-
-        VkSwapchainCreateInfoKHR swap_chain_create_info{};
-        swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swap_chain_create_info.surface = m_surface;
-
-        swap_chain_create_info.minImageCount = image_count;
-        swap_chain_create_info.imageFormat = surfaceFormat.format;
-        swap_chain_create_info.imageColorSpace = surfaceFormat.colorSpace;
-        swap_chain_create_info.imageExtent = extent;
-        swap_chain_create_info.imageArrayLayers = 1;
-        swap_chain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-        QueueFamilyIndices indices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
-        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
-        if (indices.graphicsFamily != indices.presentFamily) {
-            swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            swap_chain_create_info.queueFamilyIndexCount = 2;
-            swap_chain_create_info.pQueueFamilyIndices = queueFamilyIndices;
-        }
-        else {
-            swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        }
-
-        swap_chain_create_info.preTransform = swap_chain_support.capabilities.currentTransform;
-        swap_chain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        swap_chain_create_info.presentMode = presentMode;
-        swap_chain_create_info.clipped = VK_TRUE;
-
-        swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
-
-        //if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
-        //    LOG_ERROR(false, "Failed to create swap chain!");
-        //}
-
-        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, nullptr);
-        //m_swap_chain_images.resize(image_count);
-        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, m_swap_chain_images.data());
-    }
-
     void GraphicsDevice::CleanUpSwapchain() {
         vkDestroyImageView(m_device, m_depth_image_view, nullptr);
         vkDestroyImage(m_device, m_depth_image, nullptr);
@@ -854,54 +713,42 @@ namespace Diffuse {
         for (auto framebuffer : m_framebuffers) {
             vkDestroyFramebuffer(m_device, framebuffer, nullptr);
         }
-        //for (auto imageView : m_swap_chain_image_views)
-        //    vkDestroyImageView(m_device, imageView, nullptr);
-
-        //vkDestroySwapchainKHR(m_device, m_swap_chain, nullptr);
+        m_swapchain->Destroy();
     }
 
     void GraphicsDevice::CleanUp(const Config& config)
     {
         glfwWaitEvents();
         vkDeviceWaitIdle(m_device);
-
         CleanUpSwapchain();
-
         //vkDestroySampler(m_device, m_texture_sampler, nullptr);
         //vkDestroyImageView(m_device, m_texture_image_view, nullptr);
-
         //vkDestroyImage(m_device, m_texture_image, nullptr);
         //vkFreeMemory(m_device, m_texture_image_memory, nullptr);
-
         for (size_t i = 0; i < 1; i++) {
             vkDestroyBuffer(m_device, m_uniform_buffers[i], nullptr);
             vkFreeMemory(m_device, m_uniform_buffers_memory[i], nullptr);
         }
-
         vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
         //vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
         //vkDestroyBuffer(m_device, m_index_buffer, nullptr);
         //vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
-        
         //vkDestroyBuffer(m_device, m_vertex_buffer, nullptr);
         //vkFreeMemory(m_device, m_vertex_buffer_memory, nullptr);
         //vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
         vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
         vkDestroyRenderPass(m_device, m_render_pass, nullptr);
-
-        for (size_t i = 0; i < 1; i++) {
-            //vkDestroySemaphore(m_device, m_render_finished_semaphores[i], nullptr);
-            //vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
+        for (size_t i = 0; i < m_render_ahead; i++) {
+            vkDestroySemaphore(m_device, m_render_complete_semaphores[i], nullptr);
+            vkDestroySemaphore(m_device, m_present_complete_semaphores[i], nullptr);
             vkDestroyFence(m_device, m_wait_fences[i], nullptr);
         }
-
         vkDestroyCommandPool(m_device, m_command_pool, nullptr);
         vkDestroyDevice(m_device, nullptr);
         if (config.enable_validation_layers)
             vkUtilities::DestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         vkDestroyInstance(m_instance, nullptr);
-
         m_window->DestroyWindow();
         glfwTerminate();
     }
@@ -913,102 +760,41 @@ namespace Diffuse {
             glfwGetFramebufferSize(m_window->window(), &width, &height);
             glfwWaitEvents();
         }
-
         vkDeviceWaitIdle(m_device);
-
         CleanUpSwapchain();
+        
+        // Create swap chain
+        m_swapchain = std::make_unique<Swapchain>(this);
+        m_swapchain->Initialize();
 
+        // === Create Depth Resource ===
+        VkFormat depthFormat = vkUtilities::FindDepthFormat(m_physical_device);
+        vkUtilities::CreateImage(m_swapchain->GetExtentWidth(), m_swapchain->GetExtentHeight(), m_device, m_physical_device, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depth_image, m_depth_image_memory, 1, 1);
+        m_depth_image_view = vkUtilities::CreateImageView(m_depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, m_device, 1, 0, 1);
 
-        // create swap chain
-        SwapChainSupportDetails swapchainsupport = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
+        // === Create Framebuffers ===
+        {
+            m_framebuffers.resize(m_swapchain->GetSwapchainImageViews().size());
 
-        VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swapchainsupport.formats);
-        VkPresentModeKHR presentmode = vkUtilities::ChooseSwapPresentMode(swapchainsupport.presentModes);
-        VkExtent2D extent = vkUtilities::ChooseSwapExtent(swapchainsupport.capabilities, m_window->window());
+            for (size_t i = 0; i < m_swapchain->GetSwapchainImageViews().size(); i++) {
+                std::array<VkImageView, 2> attachments = {
+                    m_swapchain->GetSwapchainImageView(i),
+                    m_depth_image_view
+                };
 
-        uint32_t imageCount = swapchainsupport.capabilities.minImageCount + 1;
-        if (swapchainsupport.capabilities.maxImageCount> 0 && imageCount > swapchainsupport.capabilities.maxImageCount) {
-            imageCount = swapchainsupport.capabilities.maxImageCount;
+                VkFramebufferCreateInfo framebuffer_info{};
+                framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebuffer_info.renderPass = m_render_pass;
+                framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+                framebuffer_info.pAttachments = attachments.data();
+                framebuffer_info.width = m_swapchain->GetExtentWidth();
+                framebuffer_info.height = m_swapchain->GetExtentHeight();
+                framebuffer_info.layers = 1;
+
+                if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
+                    LOG_ERROR(false, "Failed to create framebuffer!");
+                }
+            }
         }
-
-        VkSwapchainCreateInfoKHR createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = m_surface;
-
-        createInfo.minImageCount = imageCount;
-        createInfo.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-        createInfo.imageColorSpace = surfaceFormat.colorSpace;
-        createInfo.imageExtent = extent;
-        createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-        QueueFamilyIndices indices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
-        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
-        if (indices.graphicsFamily != indices.presentFamily) {
-            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            createInfo.queueFamilyIndexCount = 2;
-            createInfo.pQueueFamilyIndices = queueFamilyIndices;
-        }
-        else {
-            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        }
-
-        createInfo.preTransform = swapchainsupport.capabilities.currentTransform;
-        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode = presentmode;
-        createInfo.clipped = VK_TRUE;
-
-        //if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swap_chain) != VK_SUCCESS) {
-        //    LOG_ERROR(false, "Failed to create swap chain!");
-        //}
-
-        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, nullptr);
-        //m_swap_chain_images.resize(imageCount);
-        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, m_swap_chain_images.data(
-
-        //m_swap_chain_image_views.resize(m_swap_chain_images.size());
-
-        //for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
-        //    VkImageViewCreateInfo createInfo{};
-        //    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        //    //createInfo.image = m_swap_chain_images[i];
-        //    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        //    createInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
-        //    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        //    createInfo.subresourceRange.baseMipLevel = 0;
-        //    createInfo.subresourceRange.levelCount = 1;
-        //    createInfo.subresourceRange.baseArrayLayer = 0;
-        //    createInfo.subresourceRange.layerCount = 1;
-        //
-        //    //if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
-        //    //    LOG_ERROR(false, "Failed to create image views!");
-        //    //}
-        //}
-
-        //m_framebuffers.resize(m_swap_chain_image_views.size());
-
-        //for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
-        //    //VkImageView attachments[] = {
-        //    //    m_swap_chain_image_views[i]
-        //    //};
-        //
-        //    VkFramebufferCreateInfo framebufferInfo{};
-        //    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        //    framebufferInfo.renderPass = m_render_pass;
-        //    framebufferInfo.attachmentCount = 1;
-        //    //framebufferInfo.pAttachments = attachments;
-        //    framebufferInfo.width = m_swap_chain_extent.width;
-        //    framebufferInfo.height = m_swap_chain_extent.height;
-        //    framebufferInfo.layers = 1;
-        //
-        //    if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
-        //        LOG_ERROR(false, "Failed to create framebuffer!");
-        //    }
-        //}
     }
 }

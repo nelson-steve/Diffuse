@@ -15,6 +15,12 @@ namespace Diffuse {
 		}
 	}
 
+	void Swapchain::Destroy() {
+		for (auto imageView : m_swapchain_image_views)
+		    vkDestroyImageView(m_device->Device(), imageView, nullptr);
+		vkDestroySwapchainKHR(m_device->Device(), m_swapchain, nullptr);
+	}
+
 	void Swapchain::Initialize() {
 		bool format_found = false;
 		for (const auto& availableFormat : m_swapchain_support.formats) {

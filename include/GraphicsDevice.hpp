@@ -49,7 +49,7 @@ namespace Diffuse {
 
     class GraphicsDevice {
     public:
-        // Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
+        // Constructor: Initializes Vulkan instances and creates a window
         GraphicsDevice(Config config = {});
         void Setup();
 
@@ -72,7 +72,6 @@ namespace Diffuse {
         void CreateGraphicsPipeline();
 
         // Swapchain
-        void CreateSwapchain();
         void RecreateSwapchain();
 
         void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }

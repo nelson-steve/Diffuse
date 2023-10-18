@@ -16,6 +16,8 @@ namespace Diffuse {
 	public:
 		Swapchain(GraphicsDevice* device);
 
+		void Destroy();
+
 		Swapchain() = delete;
 		Swapchain(const Swapchain&) = delete;
 		Swapchain(Swapchain&&) = delete;
