@@ -57,6 +57,7 @@ namespace Diffuse {
         VkQueue Queue() const { return m_graphics_queue; }
         VkCommandPool CommandPool() const { return m_command_pool; }
         VkPhysicalDevice PhysicalDevice() const { return m_physical_device; }
+        VkSurfaceKHR Surface() const { return m_surface; }
 
         void Draw(Camera* camera);
         void DrawNode(Node* node, VkCommandBuffer commandBuffer);

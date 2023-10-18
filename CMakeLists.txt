@@ -13,6 +13,7 @@ set(SOURCES
     src/Renderer/Renderer.cpp
     src/Renderer/Camera.cpp
     src/Graphics/Window.cpp
+    src/Graphics/Swapchain.cpp
     src/Graphics/VulkanUtilities.cpp
     src/Graphics/Buffer.cpp
     src/Utils/ReadFile.cpp
@@ -24,6 +25,7 @@ set(HEADERS
     include/Model.hpp
     include/Texture2D.hpp
     include/GraphicsDevice.hpp
+    include/Swapchain.hpp
     include/Renderer.hpp
     include/Camera.hpp
     include/Window.hpp
