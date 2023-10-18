@@ -5,18 +5,19 @@
 namespace Diffuse {
 	Swapchain::Swapchain(GraphicsDevice* device) {
 		m_device = device;
-		m_swap_chain_support = vkUtilities::QuerySwapChainSupport(device->PhysicalDevice(), device->Surface());
-		m_present_mode = vkUtilities::ChooseSwapPresentMode(m_swap_chain_support.presentModes);
-		VkExtent2D extent = vkUtilities::ChooseSwapExtent(m_swap_chain_support.capabilities, device->GetWindow()->window());
-		uint32_t m_image_count = m_swap_chain_support.capabilities.minImageCount + 1;
-		if (m_swap_chain_support.capabilities.maxImageCount > 0 && m_image_count > m_swap_chain_support.capabilities.maxImageCount) {
-			m_image_count = m_swap_chain_support.capabilities.maxImageCount;
+		m_swapchain_support = vkUtilities::QuerySwapChainSupport(m_device->PhysicalDevice(), m_device->Surface());
+		m_surface_format = vkUtilities::ChooseSwapSurfaceFormat(m_swapchain_support.formats);
+		m_present_mode = vkUtilities::ChooseSwapPresentMode(m_swapchain_support.presentModes);
+		m_extent = vkUtilities::ChooseSwapExtent(m_swapchain_support.capabilities, device->GetWindow()->window());
+		m_image_count = m_swapchain_support.capabilities.minImageCount + 1;
+		if (m_swapchain_support.capabilities.maxImageCount > 0 && m_image_count > m_swapchain_support.capabilities.maxImageCount) {
+			m_image_count = m_swapchain_support.capabilities.maxImageCount;
 		}
 	}
 
 	void Swapchain::Initialize() {
 		bool format_found = false;
-		for (const auto& availableFormat : m_swap_chain_support.formats) {
+		for (const auto& availableFormat : m_swapchain_support.formats) {
 			if (availableFormat.format == m_format && availableFormat.colorSpace == m_color_space) {
 				m_surface_format = availableFormat;
 				format_found = true;
@@ -50,7 +51,7 @@ namespace Diffuse {
 			swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		}
 
-		swap_chain_create_info.preTransform = m_swap_chain_support.capabilities.currentTransform;
+		swap_chain_create_info.preTransform = m_swapchain_support.capabilities.currentTransform;
 		swap_chain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		swap_chain_create_info.presentMode = m_present_mode;
 		swap_chain_create_info.clipped = VK_TRUE;
@@ -62,5 +63,29 @@ namespace Diffuse {
 		vkGetSwapchainImagesKHR(m_device->Device(), m_swapchain, &m_image_count, nullptr);
 		m_swapchain_images.resize(m_image_count);
 		vkGetSwapchainImagesKHR(m_device->Device(), m_swapchain, &m_image_count, m_swapchain_images.data());
+
+		// Create Image Views
+		m_swapchain_image_views.resize(m_swapchain_images.size());
+
+		for (size_t i = 0; i < m_swapchain_images.size(); i++) {
+			VkImageViewCreateInfo image_views_create_info{};
+			image_views_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			image_views_create_info.image = m_swapchain_images[i];
+			image_views_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			image_views_create_info.format = m_format;
+			image_views_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_views_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_views_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_views_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_views_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			image_views_create_info.subresourceRange.baseMipLevel = 0;
+			image_views_create_info.subresourceRange.levelCount = 1;
+			image_views_create_info.subresourceRange.baseArrayLayer = 0;
+			image_views_create_info.subresourceRange.layerCount = 1;
+
+			if (vkCreateImageView(m_device->Device(), &image_views_create_info, nullptr, &m_swapchain_image_views[i]) != VK_SUCCESS) {
+				throw std::runtime_error("Failed to create Swapchain Image Views!");
+			}
+		}
 	}
 }

@@ -14,7 +14,8 @@ namespace Diffuse {
 #define DEFAULT_FENCE_TIMEOUT 100000000000
 
 	struct Vertex;
-	
+    struct SwapChainSupportDetails;
+
 	struct QueueFamilyIndices {
 		std::optional<uint32_t> graphicsFamily;
 		std::optional<uint32_t> presentFamily;
@@ -23,11 +24,10 @@ namespace Diffuse {
 			return graphicsFamily.has_value() && presentFamily.has_value();
 		}
 	};
-	struct SwapChainSupportDetails {
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
-	};
+	//	VkSurfaceCapabilitiesKHR capabilities;
+	//	std::vector<VkSurfaceFormatKHR> formats;
+	//	std::vector<VkPresentModeKHR> presentModes;
+	//};
 	class vkUtilities {
 	public:
 		static bool CheckValidationLayerSupport(const std::vector<const char*> validation_layers);

@@ -3,6 +3,7 @@
 #include "VulkanUtilities.hpp"
 #include "Window.hpp"
 #include "Buffer.hpp"
+#include "Swapchain.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -50,14 +51,15 @@ namespace Diffuse {
     public:
         // Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
         GraphicsDevice(Config config = {});
+        void Setup();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
-        VkDevice Device() const { return m_device; }
-        VkQueue Queue() const { return m_graphics_queue; }
-        VkCommandPool CommandPool() const { return m_command_pool; }
-        VkPhysicalDevice PhysicalDevice() const { return m_physical_device; }
-        VkSurfaceKHR Surface() const { return m_surface; }
+        const VkDevice& Device() const { return m_device; }
+        const VkQueue& Queue() const { return m_graphics_queue; }
+        const VkCommandPool& CommandPool() const { return m_command_pool; }
+        const VkPhysicalDevice& PhysicalDevice() const { return m_physical_device; }
+        const VkSurfaceKHR& Surface() const { return m_surface; }
 
         void Draw(Camera* camera);
         void DrawNode(Node* node, VkCommandBuffer commandBuffer);
@@ -92,12 +94,12 @@ namespace Diffuse {
         VkImage                         m_depth_image;
         VkRect2D                        m_frame_rect;
         VkDevice                        m_device;
-        VkFormat                        m_swap_chain_image_format;
+        //VkFormat                        m_swap_chain_image_format;
         VkSampler                       m_compute_sampler;
         VkSampler                       m_default_sampler;
         VkSampler                       m_brdf_sampler;
         VkInstance                      m_instance;
-        VkExtent2D                      m_swap_chain_extent;
+        //VkExtent2D                      m_swap_chain_extent;
         VkImageView                     m_depth_image_view;
         VkSubmitInfo                    m_submit_info;
         VkSurfaceKHR                    m_surface;
@@ -105,7 +107,8 @@ namespace Diffuse {
         VkCommandPool                   m_command_pool;
         VkDeviceMemory                  m_index_buffer_memory;
         VkDeviceMemory                  m_depth_image_memory;
-        VkSwapchainKHR                  m_swap_chain;
+        std::unique_ptr<Swapchain>      m_swapchain;
+        //VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
         VkPipelineCache                 m_pipeline_cache;
         VkDescriptorPool                m_descriptor_pool;
@@ -113,10 +116,10 @@ namespace Diffuse {
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            imagesInFlightFences;
-        std::vector<VkImage>            m_swap_chain_images;
+        //std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
-        std::vector<VkImageView>        m_swap_chain_image_views;
+        //std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkFramebuffer>      m_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;

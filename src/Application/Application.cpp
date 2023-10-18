@@ -17,6 +17,7 @@ namespace Diffuse {
 
         camera = new Camera();
         m_graphics = new GraphicsDevice();
+        m_graphics->Setup();
         model = new Model();
         model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
         m_graphics->m_models.push_back(model);

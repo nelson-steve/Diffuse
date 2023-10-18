@@ -155,10 +155,9 @@ namespace Diffuse {
             vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_present_queue);
         }
 
-        SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
-        VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
-
-        // === Create Swap Chain ===
+        //SwapChainSupportDetails swap_chain_support = vkUtilities::QuerySwapChainSupport(m_physical_device, m_surface);
+        //VkSurfaceFormatKHR surfaceFormat = vkUtilities::ChooseSwapSurfaceFormat(swap_chain_support.formats);
+#if 0
         {
             VkPresentModeKHR presentMode = vkUtilities::ChooseSwapPresentMode(swap_chain_support.presentModes);
             VkExtent2D extent = vkUtilities::ChooseSwapExtent(swap_chain_support.capabilities, m_window->window());
@@ -201,6 +200,7 @@ namespace Diffuse {
             m_swap_chain_image_format = surfaceFormat.format;
             m_swap_chain_extent = extent;
         }
+        
 
         // === Create Image Views ===
         {
@@ -227,11 +227,109 @@ namespace Diffuse {
                 }
             }
         }
+#endif
+
+        // Create Command Pool
+        {
+            QueueFamilyIndices queueFamilyIndices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
+            VkCommandPoolCreateInfo pool_info{};
+            pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            pool_info.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+            if (vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool) != VK_SUCCESS) {
+                LOG_ERROR(false, "Failed to create command pool!");
+            }
+        }
+
+        // Create Uniform Buffers
+        //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        //
+        //m_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+        //m_uniform_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT);
+        //m_uniform_buffers_mapped.resize(MAX_FRAMES_IN_FLIGHT);
+        //
+        //for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        //    vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffers[i], m_uniform_buffers_memory[i], m_physical_device, m_device);
+        //
+        //    vkMapMemory(m_device, m_uniform_buffers_memory[i], 0, bufferSize, 0, &m_uniform_buffers_mapped[i]);
+        //}
+
+        // === Create Sync Obects ===
+        {
+            m_render_complete_semaphores.resize(m_render_ahead);
+            m_present_complete_semaphores.resize(m_render_ahead);
+            m_wait_fences.resize(m_render_ahead);
+
+            VkSemaphoreCreateInfo semaphore_info{};
+            semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+            VkFenceCreateInfo fence_info{};
+            fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+            for (size_t i = 0; i < m_render_ahead; i++) {
+                if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_complete_semaphores[i]) != VK_SUCCESS ||
+                    vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_present_complete_semaphores[i]) != VK_SUCCESS ||
+                    vkCreateFence(m_device, &fence_info, nullptr, &m_wait_fences[i]) != VK_SUCCESS) {
+                    LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
+                }
+            }
+        }
+
+        const std::array<VkDescriptorPoolSize, 1> poolSizes = {{
+			//{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 16 },
+			//{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 16 },
+		}};
+
+		VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+		createInfo.maxSets = 16;
+		createInfo.poolSizeCount = (uint32_t)poolSizes.size();
+		createInfo.pPoolSizes = poolSizes.data();
+		if(vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pool)) {
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+        VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
+        pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
+
+        VkDescriptorSetLayoutBinding ubo_layout_binding{};
+        ubo_layout_binding.binding = 0;
+        ubo_layout_binding.descriptorCount = 1;
+        ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        ubo_layout_binding.pImmutableSamplers = nullptr;
+        
+        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptorSetLayoutCI.pBindings = &ubo_layout_binding;
+        descriptorSetLayoutCI.bindingCount = 1;
+        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
+        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
+        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutCI.setLayoutCount = 1;
+        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.scene;
+        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create pipeline layout!");
+        }
+        // SUCCESS
+    }
+
+    void GraphicsDevice::Setup() {
+        // === Create Swap Chain ===
+        m_swapchain = std::make_unique<Swapchain>(this);
+        m_swapchain->Initialize();
 
         // === Create Render Pass ===
         {
             VkAttachmentDescription color_attachment{};
-            color_attachment.format = m_swap_chain_image_format;
+            color_attachment.format = m_swapchain->GetFormat();
             color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
             color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -287,46 +385,18 @@ namespace Diffuse {
             }
         }
 
-        // Create Command Pool
-        {
-            QueueFamilyIndices queueFamilyIndices = vkUtilities::FindQueueFamilies(m_physical_device, m_surface);
-            VkCommandPoolCreateInfo pool_info{};
-            pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-            pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-            pool_info.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-            if (vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create command pool!");
-            }
-        }
-
-        // Create Depth Resource
-
+        // === Create Depth Resource ===
         VkFormat depthFormat = vkUtilities::FindDepthFormat(m_physical_device);
-
-        vkUtilities::CreateImage(m_swap_chain_extent.width, m_swap_chain_extent.height, m_device, m_physical_device, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depth_image, m_depth_image_memory, 1, 1);
+        vkUtilities::CreateImage(m_swapchain->GetExtentWidth(), m_swapchain->GetExtentHeight(), m_device, m_physical_device, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depth_image, m_depth_image_memory, 1, 1);
         m_depth_image_view = vkUtilities::CreateImageView(m_depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, m_device, 1, 0, 1);
-
-        // Create Uniform Buffers
-        //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-        //
-        //m_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
-        //m_uniform_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT);
-        //m_uniform_buffers_mapped.resize(MAX_FRAMES_IN_FLIGHT);
-        //
-        //for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        //    vkUtilities::CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffers[i], m_uniform_buffers_memory[i], m_physical_device, m_device);
-        //
-        //    vkMapMemory(m_device, m_uniform_buffers_memory[i], 0, bufferSize, 0, &m_uniform_buffers_mapped[i]);
-        //}
 
         // === Create Framebuffers ===
         {
-            m_framebuffers.resize(m_swap_chain_image_views.size());
+            m_framebuffers.resize(m_swapchain->GetSwapchainImageViews().size());
 
-            for (size_t i = 0; i < m_swap_chain_image_views.size(); i++) {
+            for (size_t i = 0; i < m_swapchain->GetSwapchainImageViews().size(); i++) {
                 std::array<VkImageView, 2> attachments = {
-                    m_swap_chain_image_views[i],
+                    m_swapchain->GetSwapchainImageView(i),
                     m_depth_image_view
                 };
 
@@ -335,8 +405,8 @@ namespace Diffuse {
                 framebuffer_info.renderPass = m_render_pass;
                 framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
                 framebuffer_info.pAttachments = attachments.data();
-                framebuffer_info.width = m_swap_chain_extent.width;
-                framebuffer_info.height = m_swap_chain_extent.height;
+                framebuffer_info.width = m_swapchain->GetExtentWidth();
+                framebuffer_info.height = m_swapchain->GetExtentHeight();
                 framebuffer_info.layers = 1;
 
                 if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
@@ -347,7 +417,7 @@ namespace Diffuse {
 
         // === Create Command Buffers ===
         {
-            m_command_buffers.resize(m_swap_chain_images.size());
+            m_command_buffers.resize(m_swapchain->GetSwapchainImages().size());
             VkCommandBufferAllocateInfo alloc_info{};
             alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
             alloc_info.commandPool = m_command_pool;
@@ -357,71 +427,6 @@ namespace Diffuse {
             if (vkAllocateCommandBuffers(m_device, &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
                 LOG_ERROR(false, "Failed to allocate command buffers!");
             }
-        }
-
-        // === Create Sync Obects ===
-        {
-            m_render_complete_semaphores.resize(m_render_ahead);
-            m_present_complete_semaphores.resize(m_render_ahead);
-            m_wait_fences.resize(m_render_ahead);
-
-            VkSemaphoreCreateInfo semaphore_info{};
-            semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-            VkFenceCreateInfo fence_info{};
-            fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-            for (size_t i = 0; i < m_render_ahead; i++) {
-                if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_complete_semaphores[i]) != VK_SUCCESS ||
-                    vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_present_complete_semaphores[i]) != VK_SUCCESS ||
-                    vkCreateFence(m_device, &fence_info, nullptr, &m_wait_fences[i]) != VK_SUCCESS) {
-                    LOG_ERROR(false, "Failed to create synchronization objects for a frame!");
-                }
-            }
-        }
-
-        const std::array<VkDescriptorPoolSize, 1> poolSizes = {{
-			//{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 16 },
-			//{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 16 },
-		}};
-
-		VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		createInfo.maxSets = 16;
-		createInfo.poolSizeCount = (uint32_t)poolSizes.size();
-		createInfo.pPoolSizes = poolSizes.data();
-		if(vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pool)) {
-			throw std::runtime_error("Failed to create descriptor pool");
-		}
-
-        VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
-        pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        VkDescriptorSetLayoutBinding ubo_layout_binding{};
-        ubo_layout_binding.binding = 0;
-        ubo_layout_binding.descriptorCount = 1;
-        ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        ubo_layout_binding.pImmutableSamplers = nullptr;
-        
-
-        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptorSetLayoutCI.pBindings = &ubo_layout_binding;
-        descriptorSetLayoutCI.bindingCount = 1;
-        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
-        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutCI.setLayoutCount = 1;
-        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.scene;
-        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create pipeline layout!");
         }
 
         CreateUniformBuffer();
@@ -458,7 +463,6 @@ namespace Diffuse {
         }
 
         CreateGraphicsPipeline();
-        // SUCCESS
     }
 
     void GraphicsDevice::CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices) {
@@ -645,7 +649,7 @@ namespace Diffuse {
         vkWaitForFences(m_device, 1, &m_wait_fences[m_current_frame_index], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_device, m_swap_chain, UINT64_MAX, m_render_complete_semaphores[m_current_frame_index], VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain->GetSwapchain(), UINT64_MAX, m_render_complete_semaphores[m_current_frame_index], VK_NULL_HANDLE, &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             RecreateSwapchain();
@@ -702,7 +706,7 @@ namespace Diffuse {
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores;
 
-        VkSwapchainKHR swapChains[] = { m_swap_chain };
+        VkSwapchainKHR swapChains[] = { m_swapchain->GetSwapchain()};
 
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapChains;
@@ -735,7 +739,7 @@ namespace Diffuse {
         renderPassInfo.renderPass = m_render_pass;
         renderPassInfo.framebuffer = m_framebuffers[image_index];
         renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = m_swap_chain_extent;
+        renderPassInfo.renderArea.extent = m_swapchain->GetExtent();
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
@@ -749,15 +753,15 @@ namespace Diffuse {
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float)m_swap_chain_extent.width;
-        viewport.height = (float)m_swap_chain_extent.height;
+        viewport.width = (float)m_swapchain->GetExtentWidth();
+        viewport.height = (float)m_swapchain->GetExtentHeight();
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
-        scissor.extent = m_swap_chain_extent;
+        scissor.extent = m_swapchain->GetExtent();
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
@@ -834,16 +838,13 @@ namespace Diffuse {
 
         swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
-        if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
-            LOG_ERROR(false, "Failed to create swap chain!");
-        }
+        //if (vkCreateSwapchainKHR(m_device, &swap_chain_create_info, nullptr, &m_swap_chain) != VK_SUCCESS) {
+        //    LOG_ERROR(false, "Failed to create swap chain!");
+        //}
 
-        vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, nullptr);
-        m_swap_chain_images.resize(image_count);
-        vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, m_swap_chain_images.data());
-
-        m_swap_chain_image_format = surfaceFormat.format;
-        m_swap_chain_extent = extent;
+        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, nullptr);
+        //m_swap_chain_images.resize(image_count);
+        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &image_count, m_swap_chain_images.data());
     }
 
     void GraphicsDevice::CleanUpSwapchain() {
@@ -853,10 +854,10 @@ namespace Diffuse {
         for (auto framebuffer : m_framebuffers) {
             vkDestroyFramebuffer(m_device, framebuffer, nullptr);
         }
-        for (auto imageView : m_swap_chain_image_views)
-            vkDestroyImageView(m_device, imageView, nullptr);
+        //for (auto imageView : m_swap_chain_image_views)
+        //    vkDestroyImageView(m_device, imageView, nullptr);
 
-        vkDestroySwapchainKHR(m_device, m_swap_chain, nullptr);
+        //vkDestroySwapchainKHR(m_device, m_swap_chain, nullptr);
     }
 
     void GraphicsDevice::CleanUp(const Config& config)
@@ -958,59 +959,56 @@ namespace Diffuse {
         createInfo.presentMode = presentmode;
         createInfo.clipped = VK_TRUE;
 
-        if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swap_chain) != VK_SUCCESS) {
-            LOG_ERROR(false, "Failed to create swap chain!");
-        }
+        //if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swap_chain) != VK_SUCCESS) {
+        //    LOG_ERROR(false, "Failed to create swap chain!");
+        //}
 
-        vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, nullptr);
-        m_swap_chain_images.resize(imageCount);
-        vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, m_swap_chain_images.data());
+        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, nullptr);
+        //m_swap_chain_images.resize(imageCount);
+        //vkGetSwapchainImagesKHR(m_device, m_swap_chain, &imageCount, m_swap_chain_images.data(
 
-        m_swap_chain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
-        m_swap_chain_extent = extent;
+        //m_swap_chain_image_views.resize(m_swap_chain_images.size());
 
-        m_swap_chain_image_views.resize(m_swap_chain_images.size());
+        //for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
+        //    VkImageViewCreateInfo createInfo{};
+        //    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        //    //createInfo.image = m_swap_chain_images[i];
+        //    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        //    createInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+        //    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        //    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        //    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        //    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        //    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        //    createInfo.subresourceRange.baseMipLevel = 0;
+        //    createInfo.subresourceRange.levelCount = 1;
+        //    createInfo.subresourceRange.baseArrayLayer = 0;
+        //    createInfo.subresourceRange.layerCount = 1;
+        //
+        //    //if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
+        //    //    LOG_ERROR(false, "Failed to create image views!");
+        //    //}
+        //}
 
-        for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = m_swap_chain_images[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
+        //m_framebuffers.resize(m_swap_chain_image_views.size());
 
-            if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swap_chain_image_views[i]) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create image views!");
-            }
-        }
-
-        m_framebuffers.resize(m_swap_chain_image_views.size());
-
-        for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
-            VkImageView attachments[] = {
-                m_swap_chain_image_views[i]
-            };
-
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = m_render_pass;
-            framebufferInfo.attachmentCount = 1;
-            framebufferInfo.pAttachments = attachments;
-            framebufferInfo.width = m_swap_chain_extent.width;
-            framebufferInfo.height = m_swap_chain_extent.height;
-            framebufferInfo.layers = 1;
-
-            if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create framebuffer!");
-            }
-        }
+        //for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
+        //    //VkImageView attachments[] = {
+        //    //    m_swap_chain_image_views[i]
+        //    //};
+        //
+        //    VkFramebufferCreateInfo framebufferInfo{};
+        //    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        //    framebufferInfo.renderPass = m_render_pass;
+        //    framebufferInfo.attachmentCount = 1;
+        //    //framebufferInfo.pAttachments = attachments;
+        //    framebufferInfo.width = m_swap_chain_extent.width;
+        //    framebufferInfo.height = m_swap_chain_extent.height;
+        //    framebufferInfo.layers = 1;
+        //
+        //    if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
+        //        LOG_ERROR(false, "Failed to create framebuffer!");
+        //    }
+        //}
     }
 }
