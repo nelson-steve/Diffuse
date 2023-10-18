@@ -381,10 +381,10 @@ namespace Diffuse {
             }
         }
 
-        const std::array<VkDescriptorPoolSize, 3> poolSizes = {{
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16 },
+        const std::array<VkDescriptorPoolSize, 1> poolSizes = {{
+			//{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 16 },
-			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 16 },
+			//{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 16 },
 		}};
 
 		VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -401,20 +401,60 @@ namespace Diffuse {
             throw std::runtime_error("Failed to create descriptor pool");
         }
 
-        //VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-        //descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        //descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
-        //descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
-        //VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.scene));
-        //const std::vector<VkDescriptorSetLayout> setLayouts = {
-        //descriptorSetLayouts.scene, descriptorSetLayouts.material, descriptorSetLayouts.node, descriptorSetLayouts.materialBuffer
-        //};
+        VkDescriptorSetLayoutBinding ubo_layout_binding{};
+        ubo_layout_binding.binding = 0;
+        ubo_layout_binding.descriptorCount = 1;
+        ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        ubo_layout_binding.pImmutableSamplers = nullptr;
+        
+
+        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptorSetLayoutCI.pBindings = &ubo_layout_binding;
+        descriptorSetLayoutCI.bindingCount = 1;
+        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
         VkPipelineLayoutCreateInfo pipelineLayoutCI{};
         pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutCI.setLayoutCount = 0;
-        //pipelineLayoutCI.pSetLayouts = setLayouts.data();
+        pipelineLayoutCI.setLayoutCount = 1;
+        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.scene;
         if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");
+        }
+
+        CreateUniformBuffer();
+
+        // Descriptor set
+        std::vector<VkDescriptorSetLayout> layouts(m_render_ahead, m_descriptorSetLayouts.scene);
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = m_descriptor_pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(m_render_ahead);
+        allocInfo.pSetLayouts = layouts.data();
+
+        m_descriptor_sets.scene.resize(m_render_ahead);
+        if (vkAllocateDescriptorSets(m_device, &allocInfo, m_descriptor_sets.scene.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        }
+
+        for (size_t i = 0; i < m_render_ahead; i++) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = m_ubo.uniformBuffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UBO);
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = m_descriptor_sets.scene[i];
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+
+            vkUpdateDescriptorSets(m_device, 1, &descriptorWrite, 0, nullptr);
         }
 
         CreateGraphicsPipeline();
@@ -461,9 +501,20 @@ namespace Diffuse {
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
 
+    void GraphicsDevice::CreateUniformBuffer() {
+        VkDeviceSize buffer_size = sizeof(UBO);
+        m_ubo.uniformBuffers.resize(m_render_ahead);
+        m_ubo.uniformBuffersMemory.resize(m_render_ahead);
+        m_ubo.uniformBuffersMapped.resize(m_render_ahead);
+        for (int i = 0; i < m_ubo.uniformBuffers.size(); i++) {
+            vkUtilities::CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ubo.uniformBuffers[i],
+                m_ubo.uniformBuffersMemory[i], m_physical_device, m_device);
 
+            vkMapMemory(m_device, m_ubo.uniformBuffersMemory[i], 0, buffer_size, 0, &m_ubo.uniformBuffersMapped[i]);
+        }
+    }
 
-#if 1
     void GraphicsDevice::CreateGraphicsPipeline() {
         // Create Graphics Pipeline
         auto vert_shader_code = Utils::File::ReadFile("../shaders/basic/basic_vert.spv");
@@ -588,7 +639,6 @@ namespace Diffuse {
         vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
         vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
     }
-#endif
 
     void GraphicsDevice::Draw(Camera* camera) {
 
@@ -606,6 +656,18 @@ namespace Diffuse {
         }
 
         //vkUtilities::UpdateUniformBuffers(camera, m_current_frame, m_swap_chain_extent, m_uniform_buffers_mapped);
+        {
+            UBO ubo{};
+            ubo.model = glm::mat4(1.0);
+            ubo.view = camera->GetView();
+            ubo.proj = camera->GetProjection();
+            //ubo.model = glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            //ubo.proj = glm::perspective(glm::radians(45.0f), m_swap_chain_extent.width / (float)m_swap_chain_extent.height, 0.1f, 10.0f);
+            //ubo.proj[1][1] *= -1;
+
+            memcpy(m_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
+        }
 
         vkResetFences(m_device, 1, &m_wait_fences[m_current_frame_index]);
 
@@ -698,7 +760,7 @@ namespace Diffuse {
         scissor.extent = m_swap_chain_extent;
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-        //vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
         {
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.default_);
             VkBuffer vertexBuffers[] = { m_models[0]->m_vertices.buffer };

@@ -31,13 +31,13 @@ namespace Diffuse {
         while (!m_graphics->GetWindow()->WindowShouldClose()) {
             m_graphics->GetWindow()->PollEvents();
 
-            m_graphics->Draw(camera);
-
-            //auto new_time = std::chrono::high_resolution_clock::now();
-            //float frame_time = std::chrono::duration<float, std::chrono::seconds::period>(new_time - current_time).count();
-            //current_time = new_time;
-            //camera->Update(frame_time, m_graphics->GetWindow()->window());
+            auto new_time = std::chrono::high_resolution_clock::now();
+            float frame_time = std::chrono::duration<float, std::chrono::seconds::period>(new_time - current_time).count();
+            current_time = new_time;
+            camera->Update(frame_time, m_graphics->GetWindow()->window());
             //renderer->RenderModel(camera, frame_time, model);
+
+            m_graphics->Draw(camera);
         }
     }
     void Application::Destroy()

@@ -40,6 +40,12 @@ namespace Diffuse {
         };
     };
 
+    struct UBO {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
+
     class GraphicsDevice {
     public:
         // Constructor: Initializes Vulkan and creates a Vulkan Device and creates a window.
@@ -57,6 +63,7 @@ namespace Diffuse {
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);
+        void CreateUniformBuffer();
 
         void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
@@ -129,11 +136,18 @@ namespace Diffuse {
         } m_pipelines;
 
         struct DescriptorSets {
-            VkDescriptorSet scene;
+            std::vector<VkDescriptorSet> scene;
             VkDescriptorSet skybox;
-        };
+        } m_descriptor_sets;
+
+        struct {
+            std::vector<VkBuffer> uniformBuffers;
+            std::vector<VkDeviceMemory> uniformBuffersMemory;
+            std::vector<void*> uniformBuffersMapped;
+        } m_ubo;
+
         std::vector<VkFence> m_wait_fences;
-        std::vector<DescriptorSets> descriptorSets;
+        //std::vector<DescriptorSets> m_descriptor_sets;
         std::vector<VkCommandBuffer> commandBuffers;
         std::vector<VkSemaphore> m_render_complete_semaphores;
         std::vector<VkSemaphore> m_present_complete_semaphores;
