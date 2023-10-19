@@ -221,7 +221,6 @@ namespace Diffuse {
 		}
 
 		m_graphics_device->FlushCommandBuffer(blit_cmd, copy_queue, true);
-		//device->flushCommandBuffer(blitCmd, copyQueue, true);
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

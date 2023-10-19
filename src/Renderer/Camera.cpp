@@ -16,7 +16,7 @@ namespace Diffuse {
 		m_yaw = 0.0f;
 		m_pitch = 0.0f;
 
-		m_projection = glm::perspective(90.0f, m_aspect, m_near, m_far);
+		m_projection = glm::perspective(45.0f, m_aspect, m_near, m_far);
 		m_view = glm::lookAt(m_position, m_position + m_front, m_up);
 	}
 
