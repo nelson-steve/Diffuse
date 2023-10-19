@@ -182,7 +182,7 @@ namespace Diffuse {
 			m_materials.push_back(material);
 		}
 		// Push a default material at the end of the list for meshes with no material assigned
-		m_materials.push_back(Material());
+		//m_materials.push_back(Material());
 	}
 
 	void Model::GetNodeProps(const tinygltf::Node& node, const tinygltf::Model& model, uint32_t& vertex_count, uint32_t& index_count) {
@@ -345,7 +345,8 @@ namespace Diffuse {
 						return;
 					}
 				}
-				Primitive* new_primitive = new Primitive(index_start, index_count, vertex_count);
+				uint32_t mat_index = primitive.material > -1 ? primitive.material : -1;
+				Primitive* new_primitive = new Primitive(index_start, index_count, vertex_count, mat_index);
 				new_mesh->primitives.push_back(new_primitive);
 			}
 			new_node->mesh = new_mesh;

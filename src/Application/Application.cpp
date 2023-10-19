@@ -17,10 +17,10 @@ namespace Diffuse {
 
         camera = new Camera();
         m_graphics = new GraphicsDevice();
-        m_graphics->Setup();
         model = new Model();
         model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
         m_graphics->m_models.push_back(model);
+        m_graphics->Setup();
         //model = new Model("../assets/Avocado/Avocado.gltf", m_graphics);
         //model = new Model("../assets/Sponza/Sponza/glTF/Sponza.gltf", m_graphics);
         renderer = new Renderer(m_graphics);

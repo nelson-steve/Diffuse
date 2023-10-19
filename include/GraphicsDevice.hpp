@@ -144,6 +144,7 @@ namespace Diffuse {
         //friend class Model;
         //friend class Texture2D;
         std::vector<Model*> m_models;
+        Texture2D* white_texture;
 
     private:
         std::shared_ptr<Window>         m_window;
@@ -217,7 +218,7 @@ namespace Diffuse {
 
         // Other variables
         uint32_t m_current_frame_index = 0;
-        uint32_t m_render_ahead = 2;
+        uint32_t m_render_ahead = 1;
         bool m_framebuffer_resized = false;
         uint32_t m_render_samples = 0;
         // =====================================================

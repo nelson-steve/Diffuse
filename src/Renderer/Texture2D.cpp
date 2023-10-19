@@ -15,7 +15,7 @@ namespace Diffuse {
 		bool delete_buffer = false;
 		VkDeviceSize buffer_size = 0;
 		if (image.component == 3) {
-			image.width* image.height * 4;
+			buffer_size = image.width* image.height * 4;
 			buffer = new unsigned char[buffer_size];
 			unsigned char* rgba = buffer;
 			unsigned char* rgb = &image.image[0];
@@ -220,6 +220,7 @@ namespace Diffuse {
 			vkCmdPipelineBarrier(blit_cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
 		}
 
+		m_graphics_device->FlushCommandBuffer(blit_cmd, copy_queue, true);
 		//device->flushCommandBuffer(blitCmd, copyQueue, true);
 
 		VkSamplerCreateInfo samplerInfo{};
@@ -304,6 +305,8 @@ namespace Diffuse {
         vkUtilities::CopyBufferToImage(m_graphics_device->Queue(), m_graphics_device->CommandPool(), m_graphics_device->Device(), stagingBuffer, m_texture_image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
         vkUtilities::TransitionImageLayout(m_graphics_device->Queue(), m_graphics_device->CommandPool(), m_graphics_device->Device(), m_texture_image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
+		m_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
         vkDestroyBuffer(m_graphics_device->Device(), stagingBuffer, nullptr);
         vkFreeMemory(m_graphics_device->Device(), stagingBufferMemory, nullptr);
 
@@ -332,6 +335,14 @@ namespace Diffuse {
         if (vkCreateSampler(m_graphics_device->Device(), &samplerInfo, nullptr, &m_texture_sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
+
+		UpdateDescriptor();		
+	}
+
+	void Texture2D::UpdateDescriptor() {
+		m_descriptor.sampler = m_texture_sampler;
+		m_descriptor.imageView = m_texture_image_view;
+		m_descriptor.imageLayout = m_imageLayout;
 	}
 
 #if 0

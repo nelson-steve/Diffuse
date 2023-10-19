@@ -189,52 +189,12 @@ namespace Diffuse {
                 }
             }
         }
-
-        const std::array<VkDescriptorPoolSize, 1> poolSizes = {{
-			//{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 16 },
-			//{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 16 },
-		}};
-
-		VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		createInfo.maxSets = 16;
-		createInfo.poolSizeCount = (uint32_t)poolSizes.size();
-		createInfo.pPoolSizes = poolSizes.data();
-		if(vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pool)) {
-			throw std::runtime_error("Failed to create descriptor pool");
-		}
-
-        VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
-        pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        VkDescriptorSetLayoutBinding ubo_layout_binding{};
-        ubo_layout_binding.binding = 0;
-        ubo_layout_binding.descriptorCount = 1;
-        ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        ubo_layout_binding.pImmutableSamplers = nullptr;
-        
-        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptorSetLayoutCI.pBindings = &ubo_layout_binding;
-        descriptorSetLayoutCI.bindingCount = 1;
-        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
-        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutCI.setLayoutCount = 1;
-        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.scene;
-        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create pipeline layout!");
-        }
         // SUCCESS
     }
 
     void GraphicsDevice::Setup() {
+
+        white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, this);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
         m_swapchain->Initialize();
@@ -344,35 +304,146 @@ namespace Diffuse {
 
         CreateUniformBuffer();
 
-        // Descriptor set
-        std::vector<VkDescriptorSetLayout> layouts(m_render_ahead, m_descriptorSetLayouts.scene);
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = m_descriptor_pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(m_render_ahead);
-        allocInfo.pSetLayouts = layouts.data();
+        uint32_t imageSamplerCount = 0;
+        uint32_t materialCount = 0;
+        uint32_t meshCount = 0;
 
-        m_descriptor_sets.scene.resize(m_render_ahead);
-        if (vkAllocateDescriptorSets(m_device, &allocInfo, m_descriptor_sets.scene.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets!");
+        for (auto& material : m_models[0]->GetMaterials()) {
+            imageSamplerCount += 5;
+            materialCount++;
+        }
+        for (auto node : m_models[0]->GetLinearNodes()) {
+            if (node->mesh) {
+                meshCount++;
+            }
         }
 
-        for (size_t i = 0; i < m_render_ahead; i++) {
+        const std::array<VkDescriptorPoolSize, 2> poolSizes = { {
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, imageSamplerCount * m_swapchain->GetImageCount() },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (4 + meshCount) * m_swapchain->GetImageCount() },
+                //{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 16 },
+            } };
+
+        VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+        createInfo.maxSets = (2 + meshCount + materialCount) * m_swapchain->GetImageCount();
+        createInfo.poolSizeCount = (uint32_t)poolSizes.size();
+        createInfo.pPoolSizes = poolSizes.data();
+        if (vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pool)) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
+
+        VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
+        pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
+
+        std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
+                { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT,   nullptr },
+                { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+        };
+
+        //VkDescriptorSetLayoutBinding ubo_layout_binding{};
+        //ubo_layout_binding.binding = 0;
+        //ubo_layout_binding.descriptorCount = 1;
+        //ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        //ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        //ubo_layout_binding.pImmutableSamplers = nullptr;
+
+        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptorSetLayoutCI.pBindings = set_layout_bindings.data();
+        descriptorSetLayoutCI.bindingCount = set_layout_bindings.size();
+        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
+
+        // Descriptor set
+        //std::vector<VkDescriptorSetLayout> layouts(m_render_ahead, m_descriptorSetLayouts.scene);
+        //m_descriptor_sets.scene.resize(m_render_ahead);
+
+        for (size_t i = 0; i < m_models[0]->GetMaterials().size(); i++) {
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = m_descriptor_pool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &m_descriptorSetLayouts.scene;
+
+            if (vkAllocateDescriptorSets(m_device, &allocInfo, &(m_models[0]->GetMaterial(i).descriptorSet)) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate descriptor sets!");
+            }
+
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = m_ubo.uniformBuffers[i];
+            bufferInfo.buffer = m_ubo.uniformBuffers[0];
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UBO);
 
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = m_descriptor_sets.scene[i];
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = &bufferInfo;
+            //VkDescriptorImageInfo temp = m_models[0]->GetMaterial(0).baseColorTexture->m_descriptor;
+            std::vector<VkDescriptorImageInfo> image_descriptors = {
+                m_models[0]->GetMaterial(i).baseColorTexture->m_descriptor,
+                m_models[0]->GetMaterial(i).metallicRoughnessTexture->m_descriptor,
+                m_models[0]->GetMaterial(i).normalTexture->m_descriptor,
+                m_models[0]->GetMaterial(i).occlusionTexture->m_descriptor,
+                m_models[0]->GetMaterial(i).emissiveTexture->m_descriptor,
+            };
 
-            vkUpdateDescriptorSets(m_device, 1, &descriptorWrite, 0, nullptr);
+            std::vector<VkWriteDescriptorSet> descriptorWrites;
+            descriptorWrites.resize(6);
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[0].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pImageInfo = &image_descriptors[0];
+
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &image_descriptors[1];
+
+            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[3].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[3].dstBinding = 3;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pImageInfo = &image_descriptors[2];
+
+            descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[4].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[4].dstBinding = 4;
+            descriptorWrites[4].descriptorCount = 1;
+            descriptorWrites[4].pImageInfo = &image_descriptors[3];
+
+            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[5].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[5].dstBinding = 5;
+            descriptorWrites[5].descriptorCount = 1;
+            descriptorWrites[5].pImageInfo = &image_descriptors[4];
+
+            vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+        }
+
+        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
+        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutCI.setLayoutCount = 1;
+        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.scene;
+        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create pipeline layout!");
         }
 
         CreateGraphicsPipeline();
@@ -433,8 +504,8 @@ namespace Diffuse {
 
     void GraphicsDevice::CreateGraphicsPipeline() {
         // Create Graphics Pipeline
-        auto vert_shader_code = Utils::File::ReadFile("../shaders/basic/basic_vert.spv");
-        auto frag_shader_code = Utils::File::ReadFile("../shaders/basic/basic_frag.spv");
+        auto vert_shader_code = Utils::File::ReadFile("../shaders/pbr/pbr_vert.spv");
+        auto frag_shader_code = Utils::File::ReadFile("../shaders/pbr/pbr_frag.spv");
 
         VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
         VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
@@ -675,7 +746,7 @@ namespace Diffuse {
         scissor.extent = m_swapchain->GetExtent();
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
+        //vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
         {
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.default_);
             VkBuffer vertexBuffers[] = { m_models[0]->m_vertices.buffer };
@@ -698,6 +769,9 @@ namespace Diffuse {
     void GraphicsDevice::DrawNode(Node* node, VkCommandBuffer commandBuffer) {
         if (node->mesh) {
             for (Primitive* primitive : node->mesh->primitives) {
+                uint32_t index = primitive->material_index > -1 ? primitive->material_index : 0;
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, 
+                    &m_models[0]->GetMaterial(index).descriptorSet, 0, NULL);
                 vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
             }
         }

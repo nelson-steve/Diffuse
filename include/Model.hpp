@@ -39,37 +39,6 @@ namespace Diffuse {
 		void fromglTfImage(tinygltf::Image& gltfimage, TextureSampler textureSampler, GraphicsDevice* device, VkQueue copyQueue);
 	};
 
-
-	struct Primitive {
-		uint32_t first_index = 0;
-		uint32_t index_count = 0;
-		uint32_t vertex_count = 0;
-		//Material& material;
-		bool has_indices = false;
-		Primitive(uint32_t _first_index, uint32_t _index_count, uint32_t _vertex_count)
-			:first_index(_first_index), index_count(_index_count), vertex_count(_vertex_count) {}
-	};
-
-	struct Mesh {
-		std::vector<Primitive*> primitives;
-		glm::mat4 matrix;
-		Mesh(const glm::mat4& mat)
-			:matrix(mat) {}
-	};
-
-	struct Node {
-		Node* parent;
-		uint32_t index;
-		std::vector<Node*> children;
-		Mesh* mesh;
-		glm::mat4 matrix;
-		std::string name;
-		glm::vec3 translation;
-		glm::vec3 scale = glm::vec3(1.0f);
-		glm::quat rotation;
-		//~Ñode();
-	};
-
 	struct Material {
 		enum AlphaMode { ALPHAMODE_OPAQUE, ALPHAMODE_MASK, ALPHAMODE_BLEND };
 		AlphaMode alphaMode = ALPHAMODE_OPAQUE;
@@ -108,6 +77,36 @@ namespace Diffuse {
 		float emissiveStrength = 1.0f;
 	};
 
+	struct Primitive {
+		uint32_t first_index = 0;
+		uint32_t index_count = 0;
+		uint32_t vertex_count = 0;
+		int material_index;
+		bool has_indices = false;
+		Primitive(uint32_t _first_index, uint32_t _index_count, uint32_t _vertex_count, int index)
+			:first_index(_first_index), index_count(_index_count), vertex_count(_vertex_count), material_index(index) {}
+	};
+
+	struct Mesh {
+		std::vector<Primitive*> primitives;
+		glm::mat4 matrix;
+		Mesh(const glm::mat4& mat)
+			:matrix(mat) {}
+	};
+
+	struct Node {
+		Node* parent;
+		uint32_t index;
+		std::vector<Node*> children;
+		Mesh* mesh;
+		glm::mat4 matrix;
+		std::string name;
+		glm::vec3 translation;
+		glm::vec3 scale = glm::vec3(1.0f);
+		glm::quat rotation;
+		//~Ñode();
+	};
+
 	class Model {
 	public:
 		Model() {}
@@ -117,6 +116,10 @@ namespace Diffuse {
 		void LoadMaterials(tinygltf::Model model);
 
 		const std::vector<Node*> GetNodes() const { return m_nodes; }
+		const std::vector<Node*> GetLinearNodes() const { return m_linear_nodes; }
+		const std::vector<Material>& GetMaterials() const { return m_materials; }
+		const Material& GetMaterial(int i) const { return m_materials[i]; }
+		Material& GetMaterial(int i) { return m_materials[i]; }
 	private:
 		std::vector<Node*> m_nodes;
 		std::vector<Node*> m_linear_nodes;
