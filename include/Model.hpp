@@ -70,18 +70,58 @@ namespace Diffuse {
 		//~Ñode();
 	};
 
+	struct Material {
+		enum AlphaMode { ALPHAMODE_OPAQUE, ALPHAMODE_MASK, ALPHAMODE_BLEND };
+		AlphaMode alphaMode = ALPHAMODE_OPAQUE;
+		float alphaCutoff = 1.0f;
+		float metallicFactor = 1.0f;
+		float roughnessFactor = 1.0f;
+		glm::vec4 baseColorFactor = glm::vec4(1.0f);
+		glm::vec4 emissiveFactor = glm::vec4(0.0f);
+		Texture2D* baseColorTexture;
+		Texture2D* metallicRoughnessTexture;
+		Texture2D* normalTexture;
+		Texture2D* occlusionTexture;
+		Texture2D* emissiveTexture;
+		bool doubleSided = false;
+		struct TexCoordSets {
+			uint8_t baseColor = 0;
+			uint8_t metallicRoughness = 0;
+			uint8_t specularGlossiness = 0;
+			uint8_t normal = 0;
+			uint8_t occlusion = 0;
+			uint8_t emissive = 0;
+		} texCoordSets;
+		struct Extension {
+			Texture2D* specularGlossinessTexture;
+			Texture2D* diffuseTexture;
+			glm::vec4 diffuseFactor = glm::vec4(1.0f);
+			glm::vec3 specularFactor = glm::vec3(0.0f);
+		} extension;
+		struct PbrWorkflows {
+			bool metallicRoughness = true;
+			bool specularGlossiness = false;
+		} pbrWorkflows;
+		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+		int index = 0;
+		bool unlit = false;
+		float emissiveStrength = 1.0f;
+	};
+
 	class Model {
 	public:
 		Model() {}
 		void Load(const std::string& path, GraphicsDevice* device);
 		void GetNodeProps(const tinygltf::Node& node, const tinygltf::Model& model, uint32_t& vertex_count, uint32_t& index_count);
 		void LoadNode(Node* parent, const tinygltf::Node& node, uint32_t node_index, const tinygltf::Model& model);
+		void LoadMaterials(tinygltf::Model model);
 
 		const std::vector<Node*> GetNodes() const { return m_nodes; }
 	private:
 		std::vector<Node*> m_nodes;
 		std::vector<Node*> m_linear_nodes;
 		std::vector<Texture2D*> m_textures;
+		std::vector<Material> m_materials;
 		uint32_t* m_index_buffer;
 		Vertex* m_vertex_buffer;
 		uint32_t m_vertex_pos = 0;
