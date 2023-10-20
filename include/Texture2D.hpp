@@ -19,14 +19,25 @@ namespace Diffuse {
 	public:
 		Texture2D() {}
         Texture2D(tinygltf::Image image, TextureSampler sampler, VkQueue copy_queue, GraphicsDevice* graphics_device);
-		Texture2D(const std::string& path, VkFormat format, GraphicsDevice* graphics_device);
+		Texture2D(const std::string& path, VkFormat format, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
 		Texture2D(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, uint32_t levels, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
         void UpdateDescriptor();
+
+        uint32_t GetWidth() const { return m_width; }
+        uint32_t GetHeight() const { return m_height; }
+        uint32_t GetMipLevels() const { return m_mip_levels; }
+        uint32_t GetLayers() const { return m_layers; }
+        const VkImage& GetImage() const { return m_texture_image; }
+        const VkImageView& GetView() const { return m_texture_image_view; }
+        const VkImageLayout& GetLayout() const { return m_imageLayout; }
+        const VkDeviceMemory& GetMemory() const { return m_texture_image_memory; }
+        const VkSampler& GetSampler() const { return m_texture_sampler; }
 	public:
 		GraphicsDevice* m_graphics_device;
 
-		uint32_t m_width, m_height, m_mip_levels;
-        uint32_t m_layers;
+		uint32_t m_width = 0, m_height = 0, m_mip_levels = 0;
+        uint32_t m_layers = 0;
+        bool m_is_hdr = false;
 
 		VkImage m_texture_image;
 		VkSampler m_texture_sampler;

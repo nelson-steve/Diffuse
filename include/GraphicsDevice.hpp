@@ -52,6 +52,7 @@ namespace Diffuse {
         // Constructor: Initializes Vulkan instances and creates a window
         GraphicsDevice(Config config = {});
         void Setup();
+        void SetupSkybox();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
@@ -154,12 +155,10 @@ namespace Diffuse {
         VkImage                         m_depth_image;
         VkRect2D                        m_frame_rect;
         VkDevice                        m_device;
-        //VkFormat                        m_swap_chain_image_format;
         VkSampler                       m_compute_sampler;
-        VkSampler                       m_default_sampler;
+        VkSampler                       m_skybox_sampler;
         VkSampler                       m_brdf_sampler;
         VkInstance                      m_instance;
-        //VkExtent2D                      m_swap_chain_extent;
         VkImageView                     m_depth_image_view;
         VkSubmitInfo                    m_submit_info;
         VkSurfaceKHR                    m_surface;
@@ -168,18 +167,14 @@ namespace Diffuse {
         VkDeviceMemory                  m_index_buffer_memory;
         VkDeviceMemory                  m_depth_image_memory;
         std::unique_ptr<Swapchain>      m_swapchain;
-        //VkSwapchainKHR                  m_swap_chain;
         VkDeviceMemory                  m_vertex_buffer_memory;
         VkPipelineCache                 m_pipeline_cache;
-        VkDescriptorPool                m_descriptor_pool;
-        VkPipelineLayout                m_pipeline_layout;
+        //VkPipelineLayout                m_pipeline_layout;
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            imagesInFlightFences;
-        //std::vector<VkImage>            m_swap_chain_images;
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
-        //std::vector<VkImageView>        m_swap_chain_image_views;
         std::vector<VkFramebuffer>      m_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
@@ -187,21 +182,36 @@ namespace Diffuse {
         //std::unordered_map<std::string, VkPipeline> pipelines;
         //VkPipeline boundPipeline;
 
+        struct DescriptorPools {
+            VkDescriptorPool scene;
+            VkDescriptorPool compute;
+        } m_descriptor_pools;
+
         struct DescriptorSetLayouts {
             VkDescriptorSetLayout empty;
             VkDescriptorSetLayout scene;
+            VkDescriptorSetLayout skybox;
+            VkDescriptorSetLayout compute;
             VkDescriptorSetLayout material;
             VkDescriptorSetLayout node;
             VkDescriptorSetLayout materialBuffer;
         } m_descriptorSetLayouts;
 
+        struct PipelineLayouts{
+            VkPipelineLayout scene;
+            VkPipelineLayout skybox;
+            VkPipelineLayout compute;
+        } m_pipeline_layouts;
         struct Pipelines {
-            VkPipeline default_;
+            VkPipeline scene;
+            VkPipeline skybox;
+            VkPipeline compute;
         } m_pipelines;
 
         struct DescriptorSets {
             std::vector<VkDescriptorSet> scene;
             VkDescriptorSet skybox;
+            VkDescriptorSet compute;
         } m_descriptor_sets;
 
         struct {
