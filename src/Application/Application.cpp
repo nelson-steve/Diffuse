@@ -12,14 +12,18 @@ namespace Diffuse {
     static Renderer* renderer;
     static Camera* camera;
     static Model* model;
+    static Model* skybox;
 
     void Application::Init() {
 
         camera = new Camera();
         m_graphics = new GraphicsDevice();
         model = new Model();
+        skybox = new Model();
         model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
+        skybox->Load("../assets/Box.gltf", m_graphics);
         m_graphics->m_models.push_back(model);
+        m_graphics->m_models.push_back(skybox);
         m_graphics->Setup();
         //model = new Model("../assets/Avocado/Avocado.gltf", m_graphics);
         //model = new Model("../assets/Sponza/Sponza/glTF/Sponza.gltf", m_graphics);

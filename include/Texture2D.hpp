@@ -57,6 +57,16 @@ namespace Diffuse {
             VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
             VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         void UpdateDescriptor();
+
+        uint32_t GetWidth() const { return m_width; }
+        uint32_t GetHeight() const { return m_height; }
+        //uint32_t GetMipLevels() const { return m_mip_levels; }
+        uint32_t GetLayers() const { return m_layers; }
+        const VkImage& GetImage() const { return m_texture_image; }
+        const VkImageView& GetView() const { return m_texture_image_view; }
+        const VkImageLayout& GetLayout() const { return m_imageLayout; }
+        const VkDeviceMemory& GetMemory() const { return m_texture_image_memory; }
+        const VkSampler& GetSampler() const { return m_texture_sampler; }
     public:
         GraphicsDevice* m_graphics_device;
 

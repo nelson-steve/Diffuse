@@ -64,6 +64,7 @@ namespace Diffuse {
 
         void Draw(Camera* camera);
         void DrawNode(Node* node, VkCommandBuffer commandBuffer);
+        void DrawNodeSkybox(Node* node, VkCommandBuffer commandBuffer);
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);

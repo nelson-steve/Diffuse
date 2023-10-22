@@ -396,7 +396,8 @@ namespace Diffuse {
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
 		// If we're going to generate mipmaps transition base mip to transfer src layout, otherwise use shader read only layout.
-		VkImageLayout final_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // levels = 1
+		//VkImageLayout final_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // levels = 1
+		VkImageLayout final_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL; // levels = 1
 		{
 			VkImageMemoryBarrier barrier{};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -585,7 +586,7 @@ namespace Diffuse {
 			view_info.subresourceRange.baseMipLevel = 0;
 			view_info.subresourceRange.levelCount = m_mip_levels;
 			view_info.subresourceRange.baseArrayLayer = 0;
-			view_info.subresourceRange.layerCount = layers;
+			view_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
 			VkImageView imageView;
 			if (vkCreateImageView(m_graphics_device->Device(), &view_info, nullptr, &imageView) != VK_SUCCESS) {
@@ -625,8 +626,8 @@ namespace Diffuse {
 		bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(m_graphics_device->Device(), &bufferCreateInfo, nullptr, &stagingBuffer)) {
-
+		if (vkCreateBuffer(m_graphics_device->Device(), &bufferCreateInfo, nullptr, &stagingBuffer) != VK_SUCCESS) {
+			assert(false);
 		}
 
 		// Get memory requirements for the staging buffer (alignment, memory type bits)
@@ -636,17 +637,17 @@ namespace Diffuse {
 		// Get memory type index for a host visible buffer
 		memAllocInfo.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, graphics_device->PhysicalDevice());
 
-		if (vkAllocateMemory(graphics_device->Device(), &memAllocInfo, nullptr, &stagingMemory)) {
-
+		if (vkAllocateMemory(graphics_device->Device(), &memAllocInfo, nullptr, &stagingMemory) != VK_SUCCESS) {
+			assert(false);
 		}
-		if (vkBindBufferMemory(graphics_device->Device(), stagingBuffer, stagingMemory, 0)) {
-
+		if (vkBindBufferMemory(graphics_device->Device(), stagingBuffer, stagingMemory, 0) != VK_SUCCESS) {
+			assert(false);
 		}
 
 		// Copy texture data into staging buffer
 		uint8_t* data;
-		if (vkMapMemory(graphics_device->Device(), stagingMemory, 0, memReqs.size, 0, (void**)&data)) {
-
+		if (vkMapMemory(graphics_device->Device(), stagingMemory, 0, memReqs.size, 0, (void**)&data) != VK_SUCCESS) {
+			assert(false);
 		}
 		memcpy(data, ktxTextureData, ktxTextureSize);
 		vkUnmapMemory(m_graphics_device->Device(), stagingMemory);
@@ -698,8 +699,8 @@ namespace Diffuse {
 		imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
 
-		if (vkCreateImage(m_graphics_device->Device(), &imageCreateInfo, nullptr, &m_texture_image)) {
-
+		if (vkCreateImage(m_graphics_device->Device(), &imageCreateInfo, nullptr, &m_texture_image) != VK_SUCCESS) {
+			assert(false);
 		}
 
 		vkGetImageMemoryRequirements(m_graphics_device->Device(), m_texture_image, &memReqs);
@@ -707,8 +708,12 @@ namespace Diffuse {
 		memAllocInfo.allocationSize = memReqs.size;
 		memAllocInfo.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, graphics_device->PhysicalDevice());
 
-		if (vkAllocateMemory(m_graphics_device->Device(), &memAllocInfo, nullptr, &m_texture_image_memory));
-		if (vkBindImageMemory(m_graphics_device->Device(), m_texture_image, m_texture_image_memory, 0));
+		if (vkAllocateMemory(m_graphics_device->Device(), &memAllocInfo, nullptr, &m_texture_image_memory) != VK_SUCCESS) {
+			assert(false);
+		}
+		if (vkBindImageMemory(m_graphics_device->Device(), m_texture_image, m_texture_image_memory, 0) != VK_SUCCESS) {
+			assert(false);
+		}
 
 		// Use a separate command buffer for texture loading
 		VkCommandBuffer copyCmd = CreateCommandBuffer(graphics_device->Device(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, graphics_device->CommandPool(), true);
@@ -766,8 +771,8 @@ namespace Diffuse {
 		samplerCreateInfo.minLod = 0.0f;
 		samplerCreateInfo.maxLod = (float)m_mipLevels;
 		samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-		if (vkCreateSampler(graphics_device->Device(), &samplerCreateInfo, nullptr, &m_texture_sampler)) {
-
+		if (vkCreateSampler(graphics_device->Device(), &samplerCreateInfo, nullptr, &m_texture_sampler) != VK_SUCCESS) {
+			assert(false);
 		}
 
 		// Create image view
@@ -778,8 +783,8 @@ namespace Diffuse {
 		viewCreateInfo.subresourceRange.layerCount = 6;
 		viewCreateInfo.subresourceRange.levelCount = m_mipLevels;
 		viewCreateInfo.image = m_texture_image;
-		if (vkCreateImageView(graphics_device->Device(), &viewCreateInfo, nullptr, &m_texture_image_view)) {
-
+		if (vkCreateImageView(graphics_device->Device(), &viewCreateInfo, nullptr, &m_texture_image_view) != VK_SUCCESS) {
+			assert(false);
 		}
 
 		// Clean up staging resources

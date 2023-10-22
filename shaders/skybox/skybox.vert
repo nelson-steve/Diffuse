@@ -2,13 +2,15 @@
 
 layout(location = 0) in vec3 inPosition;
 
-//layout(binding = 0) uniform UniformBufferObect {
-//    mat4 proj;
-//} ubo;
+layout(binding = 0) uniform UniformBufferObect {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+} ubo;
 
-//layout(location = 0) out vec3 outPosition;
+layout (location = 0) out vec3 outUVW;
 
 void main() {
-    gl_Position = vec4(inPosition, 1.0);
-    //outPosition = inPosition;
+    outUVW = inPosition;
+    gl_Position = ubo.model * ubo.proj * vec4(inPosition, 1.0);
 }
