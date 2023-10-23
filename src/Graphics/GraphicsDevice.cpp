@@ -193,6 +193,13 @@ namespace Diffuse {
     }
 
     void GraphicsDevice::Setup() {
+        TextureSampler sampler{};
+        sampler.mag_filter = VK_FILTER_LINEAR;
+        sampler.min_filter = VK_FILTER_LINEAR;
+        sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        Texture2D* hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, this);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
@@ -447,9 +454,6 @@ namespace Diffuse {
 
         CreateGraphicsPipeline();
 
-        // skybox
-        TextureCubemap* cubemap = new TextureCubemap("../assets/papermill.ktx", VK_FORMAT_R8G8B8A8_UNORM, this, m_graphics_queue);
-
         // SetupSkybox
         {
             const std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
@@ -479,7 +483,7 @@ namespace Diffuse {
             allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             allocInfo.descriptorPool = m_descriptor_pools.scene;
             allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts = &m_descriptorSetLayouts.skybox;  
+            allocInfo.pSetLayouts = &m_descriptorSetLayouts.skybox;
 
             if (vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptor_sets.skybox) != VK_SUCCESS) {
                 throw std::runtime_error("failed to allocate descriptor sets!");
@@ -489,7 +493,7 @@ namespace Diffuse {
             buffer_info.buffer = m_ubo.uniformBuffers[0];
             buffer_info.offset = 0;
             buffer_info.range = sizeof(UBO);
-            VkDescriptorImageInfo image_info = { cubemap->GetSampler(), cubemap->GetView(), cubemap->GetLayout()};
+            VkDescriptorImageInfo image_info = { hdr->GetSampler(), hdr->GetView(), hdr->GetLayout() };
 
             std::vector<VkWriteDescriptorSet> write_descriptor_sets;
             write_descriptor_sets.resize(2);
@@ -580,9 +584,9 @@ namespace Diffuse {
 
                 VkPipelineDepthStencilStateCreateInfo depthStencil{};
                 depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-                depthStencil.depthTestEnable = VK_TRUE;
-                depthStencil.depthWriteEnable = VK_TRUE;
-                depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+                depthStencil.depthTestEnable = VK_FALSE;
+                depthStencil.depthWriteEnable = VK_FALSE;
+                depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
                 depthStencil.depthBoundsTestEnable = VK_FALSE;
                 depthStencil.stencilTestEnable = VK_FALSE;
 
@@ -635,436 +639,6 @@ namespace Diffuse {
                 vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
             }
         } // END - SetupSkybox
-    }
-
-    void GraphicsDevice::SetupSkybox() {
-        uint32_t envmap_size = 1024;
-        uint32_t envmap_levels = 1; // TODO: calculate mip levels from environment map size
-
-        const std::array<VkDescriptorPoolSize, 2> poolSizes = { {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, envmap_levels },
-        } };
-
-        VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        createInfo.maxSets = 2;
-        createInfo.poolSizeCount = (uint32_t)poolSizes.size();
-        createInfo.pPoolSizes = poolSizes.data();
-        if (vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pools.compute) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create setup descriptor pool");
-        }
-
-        VkPhysicalDeviceProperties properties{};
-        vkGetPhysicalDeviceProperties(m_physical_device, &properties);
-        VkSamplerCreateInfo sampler_create_info{};
-        sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_create_info.minFilter = VK_FILTER_LINEAR;
-        sampler_create_info.magFilter = VK_FILTER_LINEAR;
-        sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-        if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_compute_sampler) != VK_SUCCESS) {
-            assert(false);
-        }
-        sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sampler_create_info.anisotropyEnable = VK_TRUE;
-        sampler_create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-        sampler_create_info.minLod = 0.0f;
-        sampler_create_info.maxLod = FLT_MAX;
-        if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_skybox_sampler) != VK_SUCCESS) {
-            assert(false);
-        }
-
-        const std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &m_skybox_sampler }, // Environment texture
-        };
-
-        // create descriptro set layout 
-        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptorSetLayoutCI.pBindings = descriptorSetLayoutBindings.data();
-        descriptorSetLayoutCI.bindingCount = descriptorSetLayoutBindings.size();
-        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.skybox)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        // create pipeline layout
-        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
-        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutCI.setLayoutCount = 1;
-        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.skybox;
-        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.skybox) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create pipeline layout!");
-        }
-
-        // create pipeline
-        {
-            auto vert_shader_code = Utils::File::ReadFile("../shaders/skybox/skybox_vert.spv");
-            auto frag_shader_code = Utils::File::ReadFile("../shaders/skybox/skybox_frag.spv");
-
-            VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
-            VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
-
-            VkPipelineShaderStageCreateInfo vert_shader_stage_info{};
-            vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-            vert_shader_stage_info.module = vert_shader_module;
-            vert_shader_stage_info.pName = "main";
-
-            VkPipelineShaderStageCreateInfo frag_shader_stage_info{};
-            frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-            frag_shader_stage_info.module = frag_shader_module;
-            frag_shader_stage_info.pName = "main";
-
-            VkPipelineShaderStageCreateInfo shaderStages[] = { vert_shader_stage_info, frag_shader_stage_info };
-
-            VkPipelineVertexInputStateCreateInfo vertex_input_info{};
-            vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-            const std::vector<VkVertexInputBindingDescription> vertexInputBindings = {
-                { 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX },
-            };
-            const std::vector<VkVertexInputAttributeDescription> vertexAttributes = {
-                { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // Position
-            };
-
-            vertex_input_info.vertexBindingDescriptionCount = 1;
-            vertex_input_info.pVertexBindingDescriptions = vertexInputBindings.data();
-            vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size());
-            vertex_input_info.pVertexAttributeDescriptions = vertexAttributes.data();
-
-            VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-            inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-            inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-            VkPipelineViewportStateCreateInfo viewport_state{};
-            viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-            viewport_state.viewportCount = 1;
-            viewport_state.scissorCount = 1;
-
-            VkPipelineRasterizationStateCreateInfo rasterizer{};
-            rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-            rasterizer.depthClampEnable = VK_FALSE;
-            rasterizer.rasterizerDiscardEnable = VK_FALSE;
-            rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-            rasterizer.lineWidth = 1.0f;
-            rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-            rasterizer.depthBiasEnable = VK_FALSE;
-
-            VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-            //multisampleState.rasterizationSamples = static_cast<VkSampleCountFlagBits>(m_renderTargets[0].samples);
-            multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-            VkPipelineMultisampleStateCreateInfo multi_sampling{};
-            multi_sampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-            multi_sampling.sampleShadingEnable = VK_FALSE;
-            multi_sampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-            VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-            depthStencilState.depthTestEnable = VK_FALSE;
-
-            VkPipelineDepthStencilStateCreateInfo depthStencil{};
-            depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-            depthStencil.depthTestEnable = VK_TRUE;
-            depthStencil.depthWriteEnable = VK_TRUE;
-            depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-            depthStencil.depthBoundsTestEnable = VK_FALSE;
-            depthStencil.stencilTestEnable = VK_FALSE;
-
-            VkPipelineColorBlendAttachmentState color_blend_attachment{};
-            color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            color_blend_attachment.blendEnable = VK_FALSE;
-
-            VkPipelineColorBlendStateCreateInfo color_blending{};
-            color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-            color_blending.logicOpEnable = VK_FALSE;
-            color_blending.logicOp = VK_LOGIC_OP_COPY;
-            color_blending.attachmentCount = 1;
-            color_blending.pAttachments = &color_blend_attachment;
-            color_blending.blendConstants[0] = 0.0f;
-            color_blending.blendConstants[1] = 0.0f;
-            color_blending.blendConstants[2] = 0.0f;
-            color_blending.blendConstants[3] = 0.0f;
-
-            std::vector<VkDynamicState> dynamic_states = {
-                VK_DYNAMIC_STATE_VIEWPORT,
-                VK_DYNAMIC_STATE_SCISSOR
-            };
-            VkPipelineDynamicStateCreateInfo dynamic_state{};
-            dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-            dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
-            dynamic_state.pDynamicStates = dynamic_states.data();
-
-            VkGraphicsPipelineCreateInfo pipeline_info{};
-            pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-            pipeline_info.stageCount = 2;
-            pipeline_info.pStages = shaderStages;
-            pipeline_info.pVertexInputState = &vertex_input_info;
-            pipeline_info.pInputAssemblyState = &inputAssembly;
-            pipeline_info.pViewportState = &viewport_state;
-            pipeline_info.pRasterizationState = &rasterizer;
-            pipeline_info.pMultisampleState = &multi_sampling;
-            pipeline_info.pDepthStencilState = &depthStencil;
-            pipeline_info.pColorBlendState = &color_blending;
-            pipeline_info.pDynamicState = &dynamic_state;
-            pipeline_info.layout = m_pipeline_layouts.skybox;
-            pipeline_info.renderPass = m_render_pass;
-            pipeline_info.subpass = 0;
-            pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-
-            if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_pipelines.skybox) != VK_SUCCESS) {
-                LOG_ERROR(false, "Failed to create graphics pipeline!");
-            }
-
-            vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
-            vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
-        }
-
-        Texture2D* env_texture = new Texture2D(envmap_size, envmap_size, 6, VK_FORMAT_R16G16B16A16_SFLOAT, 0, VK_IMAGE_USAGE_STORAGE_BIT, this);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = m_descriptor_pools.scene;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &m_descriptorSetLayouts.skybox;
-
-        if (vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptor_sets.skybox) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets!");
-        }
-
-        VkDescriptorImageInfo image_info = { VK_NULL_HANDLE, env_texture->GetView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        VkWriteDescriptorSet write_descriptor_set{};
-        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_descriptor_set.dstSet = m_descriptor_sets.skybox;
-        write_descriptor_set.dstBinding = 0;
-        write_descriptor_set.descriptorCount = 1;
-        write_descriptor_set.pImageInfo = &image_info;
-
-        vkUpdateDescriptorSets(m_device, 1, &write_descriptor_set, 0, nullptr);
-
-        // Loading hdr texture and coverting to a cubemap
-        Texture2D* env_texture_unfiltered = new Texture2D(envmap_size, envmap_size, 6, VK_FORMAT_R16G16B16A16_SFLOAT, 0, VK_IMAGE_USAGE_STORAGE_BIT, this);
-
-        // Create compute pipeline
-        {
-          	const std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-			    { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, &m_compute_sampler },
-			    { 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-			    { 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, envmap_levels -1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-		    };
-
-            VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-            descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            descriptorSetLayoutCI.pBindings = descriptorSetLayoutBindings.data();
-            descriptorSetLayoutCI.bindingCount = descriptorSetLayoutBindings.size();
-            if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.compute)) {
-                throw std::runtime_error("Failed to create descriptor pool");
-            }
-
-            VkDescriptorSetAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            allocInfo.descriptorPool = m_descriptor_pools.compute;
-            allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts = &m_descriptorSetLayouts.compute;
-
-            struct SpecularFilterPushConstants
-            {
-                uint32_t level;
-                float roughness;
-            };
-
-            if (vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptor_sets.compute) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate descriptor sets!");
-            }
-            const std::vector<VkPushConstantRange> pipelinePushConstantRanges = {
-            { VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SpecularFilterPushConstants) },
-            };
-            VkPipelineLayoutCreateInfo pipelineLayoutCI{};
-            pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            pipelineLayoutCI.setLayoutCount = 1;
-            pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.compute;
-            pipelineLayoutCI.pushConstantRangeCount = pipelinePushConstantRanges.size();
-            pipelineLayoutCI.pPushConstantRanges = pipelinePushConstantRanges.data();
-            if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.compute) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create pipeline layout!");
-            }
-
-            auto compute_shader_code = Utils::File::ReadFile("../shaders/compute/equirecttocube_cs.spv");
-
-            VkShaderModule compute_shader_module = vkUtilities::CreateShaderModule(compute_shader_code, m_device);
-
-            const VkPipelineShaderStageCreateInfo shaderStage = {
-                VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_module, "main", nullptr,
-            };
-
-            VkComputePipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-            createInfo.stage = shaderStage;
-            createInfo.layout = m_pipeline_layouts.compute;
-
-            if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &m_pipelines.compute) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to create compute pipeline");
-            }
-
-            vkDestroyShaderModule(m_device, compute_shader_module, nullptr);
-        } // End - Create compute pipeline
-
-        Texture2D* envtexture_hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, 0, this);
-
-        {
-            VkDescriptorImageInfo input_texture = { VK_NULL_HANDLE, envtexture_hdr->GetView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-            VkWriteDescriptorSet write_descriptor_set_input{};
-            write_descriptor_set_input.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write_descriptor_set_input.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write_descriptor_set_input.dstSet = m_descriptor_sets.compute;
-            write_descriptor_set_input.dstBinding = 0;
-            write_descriptor_set_input.descriptorCount = 1;
-            write_descriptor_set_input.pImageInfo = &input_texture;
-            vkUpdateDescriptorSets(m_device, 1, &write_descriptor_set_input, 0, nullptr);
-
-            VkDescriptorImageInfo output_texture = { VK_NULL_HANDLE, env_texture_unfiltered->GetView(), VK_IMAGE_LAYOUT_GENERAL };
-            VkWriteDescriptorSet write_descriptor_set_output{};
-            write_descriptor_set_output.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write_descriptor_set_output.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            write_descriptor_set_output.dstSet = m_descriptor_sets.compute;
-            write_descriptor_set_output.dstBinding = 1;
-            write_descriptor_set_output.descriptorCount = 1;
-            write_descriptor_set_output.pImageInfo = &output_texture;
-            vkUpdateDescriptorSets(m_device, 1, &write_descriptor_set_output, 0, nullptr);
-        }
-
-        VkCommandBuffer copy_cmd = vkUtilities::BeginSingleTimeCommands(m_command_pool, m_device);
-        {
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = env_texture_unfiltered->GetImage();
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-            uint32_t size = 1;
-            vkCmdPipelineBarrier(copy_cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, size, &barrier);
-        }
-
-        vkCmdBindPipeline(copy_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines.compute);
-        vkCmdBindDescriptorSets(copy_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layouts.compute, 0, 1, &m_descriptor_sets.compute, 0, nullptr);
-        //uint32_t envmap_size = 1024;
-        vkCmdDispatch(copy_cmd, envmap_size / 32, envmap_size / 32, 6);
-        {
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = 0;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = env_texture_unfiltered->GetImage();
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-            uint32_t size = 1;
-            vkCmdPipelineBarrier(copy_cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, size, &barrier);
-        }
-        vkUtilities::EndSingleTimeCommands(copy_cmd, m_device, m_graphics_queue, m_command_pool);
-
-        vkDestroyPipeline(m_device, m_pipelines.compute, nullptr);
-        delete envtexture_hdr;
-
-        // Generate mipmaps
-        {
-            VkCommandBuffer copy_cmd = vkUtilities::BeginSingleTimeCommands(m_command_pool, m_device);
-
-            // Iterate through mip chain and consecutively blit from previous level to next level with linear filtering.
-            for (uint32_t level = 1, prevLevelWidth = env_texture_unfiltered->GetWidth(), prevLevelHeight = env_texture_unfiltered->GetHeight(); level < env_texture_unfiltered->GetMipLevels(); ++level, prevLevelWidth /= 2, prevLevelHeight /= 2) {
-
-                {
-                    //const auto preBlitBarrier = ImageMemoryBarrier(env_texture_unfiltered, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL).mipLevels(level, 1);
-                    //pipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, { preBlitBarrier });
-                    VkImageMemoryBarrier barrier{};
-                    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.image = env_texture_unfiltered->GetImage();
-                    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    barrier.subresourceRange.baseMipLevel = env_texture_unfiltered->GetMipLevels();
-                    barrier.subresourceRange.levelCount = 1;
-                    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-                    uint32_t size = 1;
-                    vkCmdPipelineBarrier(copy_cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, size, &barrier);
-                }
-
-                VkImageBlit region = {};
-                region.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, level - 1, 0, env_texture_unfiltered->GetLayers()};
-                region.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, level,   0, env_texture_unfiltered->GetLayers() };
-                region.srcOffsets[1] = { int32_t(prevLevelWidth),  int32_t(prevLevelHeight),   1 };
-                region.dstOffsets[1] = { int32_t(prevLevelWidth / 2),int32_t(prevLevelHeight / 2), 1 };
-                vkCmdBlitImage(copy_cmd,
-                    env_texture_unfiltered->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    env_texture_unfiltered->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    1, &region, VK_FILTER_LINEAR);
-
-                {
-                    //const auto postBlitBarrier = ImageMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL).mipLevels(level, 1);
-                    //pipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, { postBlitBarrier });
-                    VkImageMemoryBarrier barrier{};
-                    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-                    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-                    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.image = env_texture_unfiltered->GetImage();
-                    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    barrier.subresourceRange.baseMipLevel = env_texture_unfiltered->GetMipLevels();
-                    barrier.subresourceRange.levelCount = 1;
-                    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-                    uint32_t size = 1;
-                    vkCmdPipelineBarrier(copy_cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, size, &barrier);
-                }
-            }
-
-            // Transition whole mip chain to shader read only layout.
-            {
-                //const auto barrier = ImageMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                //pipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, { barrier });
-                VkImageMemoryBarrier barrier{};
-                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-                barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.image = env_texture_unfiltered->GetImage();
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                //barrier.subresourceRange.baseMipLevel = env_texture_unfiltered->GetMipLevels();
-                //barrier.subresourceRange.levelCount = 1;
-                //barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-                uint32_t size = 1;
-                vkCmdPipelineBarrier(copy_cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, size, &barrier);
-            }
-
-            vkUtilities::EndSingleTimeCommands(copy_cmd, m_device, m_graphics_queue, m_command_pool);
-        }
     }
 
     void GraphicsDevice::CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices) {
@@ -1364,7 +938,7 @@ namespace Diffuse {
         scissor.extent = m_swapchain->GetExtent();
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-        bool skybox = false;
+        bool skybox = true;
         if (skybox) {
             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.skybox, 0, 1, &m_descriptor_sets.skybox, 0, nullptr);
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.skybox);
@@ -1379,7 +953,7 @@ namespace Diffuse {
         }
 
         //vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
-        if(true){
+        if(false){
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.scene);
             VkBuffer vertexBuffers[] = { m_models[0]->m_vertices.buffer };
             VkDeviceSize offsets[] = { 0 };

@@ -3,9 +3,6 @@
 #include "GraphicsDevice.hpp"
 #include "Texture2D.hpp"
 
-#include "ktx.h"
-#include "ktxvulkan.h"
-
 namespace Diffuse {
 	void Model::Load(const std::string& path, GraphicsDevice* device) {
 		tinygltf::TinyGLTF loader;

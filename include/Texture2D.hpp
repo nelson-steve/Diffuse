@@ -19,7 +19,7 @@ namespace Diffuse {
 	public:
 		Texture2D() {}
         Texture2D(tinygltf::Image image, TextureSampler sampler, VkQueue copy_queue, GraphicsDevice* graphics_device);
-		Texture2D(const std::string& path, VkFormat format, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
+		Texture2D(const std::string& path, VkFormat format, TextureSampler sampler, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
 		Texture2D(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, uint32_t levels, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
         void UpdateDescriptor();
 
