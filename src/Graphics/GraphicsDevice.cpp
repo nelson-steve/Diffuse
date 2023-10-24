@@ -199,7 +199,7 @@ namespace Diffuse {
         sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        Texture2D* hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, this);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
@@ -263,7 +263,7 @@ namespace Diffuse {
                 LOG_ERROR(false, "Failed to create render pass!");
             }
         }
-
+        
         // === Create Depth Resource ===
         VkFormat depthFormat = vkUtilities::FindDepthFormat(m_physical_device);
         vkUtilities::CreateImage(m_swapchain->GetExtentWidth(), m_swapchain->GetExtentHeight(), m_device, m_physical_device, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depth_image, m_depth_image_memory, 1, 1);
@@ -453,7 +453,10 @@ namespace Diffuse {
         }
 
         CreateGraphicsPipeline();
+        SetupSkybox();
+    }
 
+    void GraphicsDevice::SetupSkybox() {
         // SetupSkybox
         {
             const std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
@@ -639,6 +642,270 @@ namespace Diffuse {
                 vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
             }
         } // END - SetupSkybox
+
+        // Offscreen renderpass
+        {
+             VkAttachmentDescription osAttachments[2] = {};
+
+            // Find a suitable depth format
+
+            osAttachments[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            osAttachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+            osAttachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            osAttachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            osAttachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            osAttachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            osAttachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            osAttachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            osAttachments[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            osAttachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+            osAttachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            osAttachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            osAttachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            osAttachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            osAttachments[1].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            osAttachments[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            //// Depth attachment
+            //osAttachments[1].format = vkUtilities::FindDepthFormat(m_physical_device);
+            //osAttachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+            //osAttachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            //osAttachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            //osAttachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            //osAttachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            //osAttachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            //osAttachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+            std::vector<VkAttachmentReference> colorReference = {};
+            colorReference.resize(2);
+            colorReference[0].attachment = 0;
+            colorReference[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            colorReference[1].attachment = 1;
+            colorReference[1].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            //VkAttachmentReference depthReference = {};
+            //depthReference.attachment = 1;
+            //depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+            VkSubpassDescription subpass = {};
+            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+            subpass.colorAttachmentCount = 2;
+            subpass.pColorAttachments = colorReference.data();
+            //subpass.pDepthStencilAttachment = &depthReference;
+
+            VkRenderPassCreateInfo renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+            renderPassCreateInfo.attachmentCount = 2;
+            renderPassCreateInfo.pAttachments = osAttachments;
+            renderPassCreateInfo.subpassCount = 1;
+            renderPassCreateInfo.pSubpasses = &subpass;
+
+            if (vkCreateRenderPass(m_device, &renderPassCreateInfo, nullptr, &m_offscreen_render_pass) != VK_SUCCESS) {
+                assert(false);
+            }
+        }// END - Offscreen renderpass
+
+        uint32_t width = 2400;
+        uint32_t height = 2400;
+        VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        // Cubemap image
+        {
+            // Cube map image description
+            VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+            imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+            imageCreateInfo.format = format;
+            imageCreateInfo.extent = { width, height, 1 };
+            imageCreateInfo.mipLevels = 1;
+            imageCreateInfo.arrayLayers = 6;
+            imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+            imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+            imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+            VkCommandBuffer layoutCmd = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+            if (vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_cubemap.image) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            VkMemoryRequirements memReqs{};
+            vkGetImageMemoryRequirements(m_device, m_cubemap.image, &memReqs);
+            VkMemoryAllocateInfo memAlloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+            memAlloc.allocationSize = memReqs.size;
+            memAlloc.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physical_device);
+
+            if (vkAllocateMemory(m_device, &memAlloc, nullptr, &m_cubemap.memory) != VK_SUCCESS) {
+                assert(false);
+            }
+            if (vkBindImageMemory(m_device, m_cubemap.image, m_cubemap.memory, 0) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            {
+                VkImageSubresourceRange subresourceRange = {};
+                subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                subresourceRange.baseMipLevel = 0;
+                subresourceRange.levelCount = 1;
+                subresourceRange.layerCount = 6;
+
+                VkImageMemoryBarrier imageMemoryBarrier{};
+                imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageMemoryBarrier.image = m_cubemap.image;
+                imageMemoryBarrier.subresourceRange = subresourceRange;
+                imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+                imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                vkCmdPipelineBarrier(layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+            }
+
+            FlushCommandBuffer(layoutCmd, m_graphics_queue, true);
+
+            // Create sampler
+            VkSamplerCreateInfo sampler_create_info = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            sampler_create_info.magFilter = VK_FILTER_LINEAR;
+            sampler_create_info.minFilter = VK_FILTER_LINEAR;
+            sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            sampler_create_info.mipLodBias = 0.0f;
+            sampler_create_info.maxAnisotropy = 1.0f;
+            sampler_create_info.compareOp = VK_COMPARE_OP_NEVER;
+            sampler_create_info.minLod = 0.0f;
+            sampler_create_info.maxLod = 1.0f;
+            sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+            if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_cubemap.sampler) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            // Create image view
+            VkImageViewCreateInfo view_create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+            view_create_info.image = VK_NULL_HANDLE;
+            view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+            view_create_info.format = format;
+            view_create_info.components = { VK_COMPONENT_SWIZZLE_R };
+            view_create_info.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+            view_create_info.subresourceRange.layerCount = 6;
+            view_create_info.image = m_cubemap.image;
+            if (vkCreateImageView(m_device, &view_create_info, nullptr, &m_cubemap.view) != VK_SUCCESS) {
+                assert(false);
+            }
+
+            view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            view_create_info.subresourceRange.layerCount = 1;
+            view_create_info.image = m_cubemap.image;
+
+            for (uint32_t i = 0; i < 6; i++)
+            {
+                view_create_info.subresourceRange.baseArrayLayer = i;
+                if (vkCreateImageView(m_device, &view_create_info, nullptr, &m_cubemap_face_image_views[i]) != VK_SUCCESS) {
+                    assert(false);
+                }
+            }
+
+        } // END - Cubemap image
+
+        // Create offscreen resources
+        // Color attachment
+        VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageCreateInfo.format = format;
+        imageCreateInfo.extent.width = width;
+        imageCreateInfo.extent.height = height;
+        imageCreateInfo.extent.depth = 1;
+        imageCreateInfo.mipLevels = 1;
+        imageCreateInfo.arrayLayers = 1;
+        imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        // Image of the framebuffer is blit source
+        imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VkImageViewCreateInfo colorImageView = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        colorImageView.format = format;
+        colorImageView.flags = 0;
+        colorImageView.subresourceRange = {};
+        colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        colorImageView.subresourceRange.baseMipLevel = 0;
+        colorImageView.subresourceRange.levelCount = 1;
+        colorImageView.subresourceRange.baseArrayLayer = 0;
+        colorImageView.subresourceRange.layerCount = 1;
+
+        VkCommandBuffer layoutCmd =  CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+        if (vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_offscreen.image) != VK_SUCCESS) {
+            assert(false);
+        }
+
+        VkMemoryRequirements memReqs{};
+        vkGetImageMemoryRequirements(m_device, m_offscreen.image, &memReqs);
+        VkMemoryAllocateInfo memAlloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        memAlloc.allocationSize = memReqs.size;
+        memAlloc.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physical_device);
+
+        if (vkAllocateMemory(m_device, &memAlloc, nullptr, &m_offscreen.memory) != VK_SUCCESS) {
+            assert(false);
+        }
+        if (vkBindImageMemory(m_device, m_offscreen.image, m_offscreen.memory, 0) != VK_SUCCESS) {
+            assert(false);
+        }
+
+        {
+
+            VkImageSubresourceRange subresourceRange = {};
+            subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            subresourceRange.baseMipLevel = 0;
+            subresourceRange.levelCount = 1;
+            subresourceRange.layerCount = 1;
+
+            VkImageMemoryBarrier imageMemoryBarrier{};
+            imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageMemoryBarrier.image = m_offscreen.image;
+            imageMemoryBarrier.subresourceRange = subresourceRange;
+            imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            imageMemoryBarrier.srcAccessMask = 0;
+            imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    
+            vkCmdPipelineBarrier(layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+        }
+
+        FlushCommandBuffer(layoutCmd, m_graphics_queue, true);
+
+        colorImageView.image = m_offscreen.image;
+        if (vkCreateImageView(m_device, &colorImageView, nullptr, &m_offscreen.view) != VK_SUCCESS) {
+            assert(false);
+        }
+
+        VkImageView attachments[2];
+        attachments[1] = m_offscreen.view;
+
+        VkFramebufferCreateInfo framebuffer_create_info = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+        framebuffer_create_info.renderPass = m_offscreen_render_pass;
+        framebuffer_create_info.attachmentCount = 2;
+        framebuffer_create_info.pAttachments = attachments;
+        framebuffer_create_info.width = width;
+        framebuffer_create_info.height = height;
+        framebuffer_create_info.layers = 1;
+
+        for (uint32_t i = 0; i < 6; i++)
+        {
+            attachments[0] = m_cubemap_face_image_views[i];
+            if (vkCreateFramebuffer(m_device, &framebuffer_create_info, nullptr, &m_offscreen_framebuffers[i]) != VK_SUCCESS) {
+                assert(false);
+            }
+        }
     }
 
     void GraphicsDevice::CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices) {
@@ -853,7 +1120,7 @@ namespace Diffuse {
         vkResetFences(m_device, 1, &m_wait_fences[m_current_frame_index]);
 
         vkResetCommandBuffer(m_command_buffers[m_current_frame_index], /*VkCommandBufferResetFlagBits*/ 0);
-        RecordCommandBuffer(m_command_buffers[m_current_frame_index], imageIndex);
+        RecordCommandBuffer(camera, m_command_buffers[m_current_frame_index], imageIndex);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -901,7 +1168,7 @@ namespace Diffuse {
         m_current_frame_index = (m_current_frame_index + 1) % m_render_ahead;
     }
 
-    void GraphicsDevice::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index) {
+    void GraphicsDevice::RecordCommandBuffer(Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index) {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         if (vkBeginCommandBuffer(command_buffer, &beginInfo) != VK_SUCCESS) {
@@ -938,6 +1205,74 @@ namespace Diffuse {
         scissor.extent = m_swapchain->GetExtent();
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
+        // Render offscreen framebuffer
+        // only once
+        {
+            for (int i = 0; i < 6; i++) {
+                VkClearValue clearValues[2];
+                clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+                clearValues[1].depthStencil = { 1.0f, 0 };
+
+                VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+                // Reuse render pass from example pass
+                renderPassBeginInfo.renderPass = m_offscreen_render_pass;
+                renderPassBeginInfo.framebuffer = m_offscreen_framebuffers[i];
+                renderPassBeginInfo.renderArea.extent.width = width;
+                renderPassBeginInfo.renderArea.extent.height = height;
+                renderPassBeginInfo.clearValueCount = 2;
+                renderPassBeginInfo.pClearValues = clearValues;
+
+                glm::mat4 viewMatrix = glm::mat4(1.0f);
+                switch (i)
+                {
+                case 0: // POSITIVE_X
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    break;
+                case 1:	// NEGATIVE_X
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    break;
+                case 2:	// POSITIVE_Y
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    break;
+                case 3:	// NEGATIVE_Y
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    break;
+                case 4:	// POSITIVE_Z
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    break;
+                case 5:	// NEGATIVE_Z
+                    viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+                    break;
+                }
+
+                // Updating uniform buffers
+                {
+                    UBO ubo{};
+                    ubo.model = glm::mat4(1.0);
+                    ubo.view = viewMatrix;
+                    ubo.proj = camera->GetProjection();
+
+                    memcpy(m_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
+                }
+
+                bool skybox = true;
+                if (skybox) {
+                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.skybox, 0, 1, &m_descriptor_sets.skybox, 0, nullptr);
+                    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.skybox);
+                    VkBuffer vertexBuffers[] = { m_models[1]->m_vertices.buffer };
+                    VkDeviceSize offsets[] = { 0 };
+                    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+                    vkCmdBindIndexBuffer(command_buffer, m_models[1]->m_indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+                    //models.skybox.draw(currentCB);
+                    for (auto& node : m_models[1]->GetNodes()) {
+                        DrawNodeSkybox(node, command_buffer);
+                    }
+                }
+            }
+        }
+
         bool skybox = true;
         if (skybox) {
             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.skybox, 0, 1, &m_descriptor_sets.skybox, 0, nullptr);
@@ -953,7 +1288,7 @@ namespace Diffuse {
         }
 
         //vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
-        if(false){
+        if(true){
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.scene);
             VkBuffer vertexBuffers[] = { m_models[0]->m_vertices.buffer };
             VkDeviceSize offsets[] = { 0 };

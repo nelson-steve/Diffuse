@@ -70,7 +70,7 @@ namespace Diffuse {
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);
         void CreateUniformBuffer();
 
-        void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
+        void RecordCommandBuffer(Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
 
         VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin = false)
@@ -164,6 +164,7 @@ namespace Diffuse {
         VkSubmitInfo                    m_submit_info;
         VkSurfaceKHR                    m_surface;
         VkRenderPass                    m_render_pass;
+        VkRenderPass                    m_offscreen_render_pass;
         VkCommandPool                   m_command_pool;
         VkDeviceMemory                  m_index_buffer_memory;
         VkDeviceMemory                  m_depth_image_memory;
@@ -177,6 +178,7 @@ namespace Diffuse {
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         std::vector<VkFramebuffer>      m_framebuffers;
+        std::array<VkFramebuffer, 6>    m_offscreen_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
         VkDebugUtilsMessengerCreateInfoEXT m_debug_create_info;
@@ -221,6 +223,20 @@ namespace Diffuse {
             std::vector<void*> uniformBuffersMapped;
         } m_ubo;
 
+        struct {
+            VkImageView view;
+            VkImage image;
+            VkDeviceMemory memory;
+            VkSampler sampler;
+        } m_cubemap;
+
+        struct {
+            VkImageView view;
+            VkImage image;
+            VkDeviceMemory memory;
+        } m_offscreen;
+        std::array<VkImageView, 6> m_cubemap_face_image_views;
+
         std::vector<VkFence> m_wait_fences;
         //std::vector<DescriptorSets> m_descriptor_sets;
         std::vector<VkCommandBuffer> commandBuffers;
@@ -232,6 +248,7 @@ namespace Diffuse {
         uint32_t m_render_ahead = 1;
         bool m_framebuffer_resized = false;
         uint32_t m_render_samples = 0;
+        Texture2D* hdr;
         // =====================================================
     };
 }
