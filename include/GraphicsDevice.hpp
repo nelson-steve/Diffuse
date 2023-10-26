@@ -53,6 +53,7 @@ namespace Diffuse {
         GraphicsDevice(Config config = {});
         void Setup();
         void SetupSkybox();
+        void SetupOffscreenResources();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
@@ -209,11 +210,13 @@ namespace Diffuse {
             VkPipeline scene;
             VkPipeline skybox;
             VkPipeline compute;
+            VkPipeline skybox_equirectangular;
         } m_pipelines;
 
         struct DescriptorSets {
             std::vector<VkDescriptorSet> scene;
             VkDescriptorSet skybox;
+            VkDescriptorSet skybox_equirectangular;
             VkDescriptorSet compute;
         } m_descriptor_sets;
 
@@ -228,6 +231,7 @@ namespace Diffuse {
             VkImage image;
             VkDeviceMemory memory;
             VkSampler sampler;
+            VkImageLayout layout;
         } m_cubemap;
 
         struct {
@@ -249,6 +253,7 @@ namespace Diffuse {
         bool m_framebuffer_resized = false;
         uint32_t m_render_samples = 0;
         Texture2D* hdr;
+        bool only_once = true;
         // =====================================================
     };
 }
