@@ -53,7 +53,7 @@ namespace Diffuse {
         GraphicsDevice(Config config = {});
         void Setup();
         void SetupSkybox();
-        void SetupOffscreenResources();
+        void SetupIBL();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
@@ -202,6 +202,7 @@ namespace Diffuse {
             VkDescriptorSetLayout scene;
             VkDescriptorSetLayout skybox;
             VkDescriptorSetLayout compute;
+            VkDescriptorSetLayout irradiancemap;
             VkDescriptorSetLayout material;
             VkDescriptorSetLayout node;
             VkDescriptorSetLayout materialBuffer;
@@ -211,11 +212,13 @@ namespace Diffuse {
             VkPipelineLayout scene;
             VkPipelineLayout skybox;
             VkPipelineLayout compute;
+            VkPipelineLayout irradiancemap;
         } m_pipeline_layouts;
         struct Pipelines {
             VkPipeline scene;
             VkPipeline skybox;
             VkPipeline compute;
+            VkPipeline irradiancemap;
             VkPipeline skybox_equirectangular;
         } m_pipelines;
 
@@ -224,6 +227,7 @@ namespace Diffuse {
             VkDescriptorSet skybox;
             VkDescriptorSet skybox_equirectangular;
             VkDescriptorSet compute;
+            VkDescriptorSet irradiancemap;
         } m_descriptor_sets;
 
         struct {
@@ -239,6 +243,14 @@ namespace Diffuse {
             VkSampler sampler;
             VkImageLayout layout;
         } m_cubemap;
+
+        struct {
+            VkImageView view;
+            VkImage image;
+            VkDeviceMemory memory;
+            VkSampler sampler;
+            VkImageLayout layout;
+        } m_irradiancemap;
 
         struct {
             VkImageView view;
