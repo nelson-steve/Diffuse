@@ -186,6 +186,12 @@ namespace Diffuse {
         //std::unordered_map<std::string, VkPipeline> pipelines;
         //VkPipeline boundPipeline;
 
+        struct SpecularFilterPushConstants
+        {
+            uint32_t level;
+            float roughness;
+        };
+
         struct DescriptorPools {
             VkDescriptorPool scene;
             VkDescriptorPool compute;
@@ -240,6 +246,7 @@ namespace Diffuse {
             VkDeviceMemory memory;
         } m_offscreen;
         std::array<VkImageView, 6> m_cubemap_face_image_views;
+        VkSampler computeSampler;
 
         std::vector<VkFence> m_wait_fences;
         //std::vector<DescriptorSets> m_descriptor_sets;
@@ -253,7 +260,8 @@ namespace Diffuse {
         bool m_framebuffer_resized = false;
         uint32_t m_render_samples = 0;
         Texture2D* hdr;
-        bool only_once = true;
+        bool only_once = false;
+        uint32_t offscreen_size = 2048;
         // =====================================================
     };
 }
