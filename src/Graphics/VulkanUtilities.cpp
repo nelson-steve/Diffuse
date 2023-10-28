@@ -435,13 +435,16 @@ namespace Diffuse {
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-		vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
+		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to reset immediate command buffer");
+		}
 		return commandBuffer;
 	}
 
 	void vkUtilities::EndSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue graphics_queue, VkCommandPool command_pool) {
-		vkEndCommandBuffer(commandBuffer);
+		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to reset immediate command buffer");
+		}
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

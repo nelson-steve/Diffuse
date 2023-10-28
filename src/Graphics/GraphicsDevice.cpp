@@ -325,13 +325,13 @@ namespace Diffuse {
         }
 
         const std::array<VkDescriptorPoolSize, 3> poolSizes = { {
-                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, imageSamplerCount * m_swapchain->GetImageCount() + 2 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (4 + meshCount) * m_swapchain->GetImageCount() },
-                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE , 4 },
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8 + imageSamplerCount * m_swapchain->GetImageCount() + 2 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (8 + meshCount) * m_swapchain->GetImageCount() },
+                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE , 8 },
             } };
 
         VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        createInfo.maxSets = (2 + meshCount + materialCount) * m_swapchain->GetImageCount();
+        createInfo.maxSets = (8 + meshCount + materialCount) * m_swapchain->GetImageCount();
         createInfo.poolSizeCount = (uint32_t)poolSizes.size();
         createInfo.pPoolSizes = poolSizes.data();
         if (vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pools.scene)) {
@@ -586,6 +586,8 @@ namespace Diffuse {
             VkComputePipelineCreateInfo compute_create_Info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
             compute_create_Info.stage = shaderStage;
             compute_create_Info.layout = m_pipeline_layouts.compute;
+            compute_create_Info.pNext = nullptr;
+            compute_create_Info.basePipelineHandle = VK_NULL_HANDLE;
 
             if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &compute_create_Info, nullptr, &m_pipelines.compute) != VK_SUCCESS) {
                 throw std::runtime_error("Failed to create compute pipeline");
@@ -667,6 +669,7 @@ namespace Diffuse {
             //destroyTexture(envTextureEquirect);
         }
         // --------------- END - Converting equirectangular to cubemap - END ------------------
+        //return;
         // --------------- Converting cubemap to irradiance map ------------------
         // Irradiance map image
         {
@@ -684,24 +687,24 @@ namespace Diffuse {
             imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-            if (vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_irradiancemap.image) != VK_SUCCESS) {
+            if (vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_env_texuture.image) != VK_SUCCESS) {
                 assert(false);
             }
 
             VkMemoryRequirements memReqs{};
-            vkGetImageMemoryRequirements(m_device, m_irradiancemap.image, &memReqs);
+            vkGetImageMemoryRequirements(m_device, m_env_texuture.image, &memReqs);
             VkMemoryAllocateInfo memAlloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
             memAlloc.allocationSize = memReqs.size;
             memAlloc.memoryTypeIndex = vkUtilities::FindMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physical_device);
 
-            if (vkAllocateMemory(m_device, &memAlloc, nullptr, &m_irradiancemap.memory) != VK_SUCCESS) {
+            if (vkAllocateMemory(m_device, &memAlloc, nullptr, &m_env_texuture.memory) != VK_SUCCESS) {
                 assert(false);
             }
-            if (vkBindImageMemory(m_device, m_irradiancemap.image, m_irradiancemap.memory, 0) != VK_SUCCESS) {
+            if (vkBindImageMemory(m_device, m_env_texuture.image, m_env_texuture.memory, 0) != VK_SUCCESS) {
                 assert(false);
             }
 
-            m_irradiancemap.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            m_env_texuture.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             // Create sampler
             VkSamplerCreateInfo sampler_create_info = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -717,13 +720,13 @@ namespace Diffuse {
             sampler_create_info.minLod = 0.0f;
             sampler_create_info.maxLod = 1.0f;
             sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-            if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_irradiancemap.sampler) != VK_SUCCESS) {
+            if (vkCreateSampler(m_device, &sampler_create_info, nullptr, &m_env_texuture.sampler) != VK_SUCCESS) {
                 assert(false);
             }
 
             // Create image view
             VkImageViewCreateInfo view_create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-            view_create_info.image = m_irradiancemap.image;
+            view_create_info.image = m_env_texuture.image;
             view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
             view_create_info.format = format;
             view_create_info.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
@@ -732,7 +735,7 @@ namespace Diffuse {
             view_create_info.subresourceRange.levelCount = 1;
             view_create_info.subresourceRange.baseArrayLayer = 0;
             view_create_info.subresourceRange.layerCount = 6;
-            if (vkCreateImageView(m_device, &view_create_info, nullptr, &m_irradiancemap.view) != VK_SUCCESS) {
+            if (vkCreateImageView(m_device, &view_create_info, nullptr, &m_env_texuture.view) != VK_SUCCESS) {
                 assert(false);
             }
 
@@ -740,7 +743,7 @@ namespace Diffuse {
 
         {
             VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-
+            
             // Linear, non-anisotropic sampler, wrap address mode (post processing compute shaders)
             createInfo.minFilter = VK_FILTER_LINEAR;
             createInfo.magFilter = VK_FILTER_LINEAR;
@@ -761,20 +764,20 @@ namespace Diffuse {
                 descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
                 descriptorSetLayoutCI.pBindings = descriptorSetLayoutBindings.data();
                 descriptorSetLayoutCI.bindingCount = descriptorSetLayoutBindings.size();
-                if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.irradiancemap)) {
+                if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.env_texuture)) {
                     throw std::runtime_error("Failed to create descriptor pool");
                 }
 
                 VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
                 allocateInfo.descriptorPool = m_descriptor_pools.scene;
                 allocateInfo.descriptorSetCount = 1;
-                allocateInfo.pSetLayouts = &m_descriptorSetLayouts.irradiancemap;
-                if (vkAllocateDescriptorSets(m_device, &allocateInfo, &m_descriptor_sets.irradiancemap) != VK_SUCCESS) {
+                allocateInfo.pSetLayouts = &m_descriptorSetLayouts.env_texuture;
+                if (vkAllocateDescriptorSets(m_device, &allocateInfo, &m_descriptor_sets.env_texuture) != VK_SUCCESS) {
                     throw std::runtime_error("Failed to allocate descriptor set");
                 }
 
                 const std::vector<VkDescriptorSetLayout> pipelineSetLayouts = {
-                    m_descriptorSetLayouts.irradiancemap,
+                    m_descriptorSetLayouts.env_texuture,
                 };
                 const std::vector<VkPushConstantRange> pipelinePushConstantRanges = {
                     { VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SpecularFilterPushConstants) },
@@ -783,100 +786,124 @@ namespace Diffuse {
                 VkPipelineLayoutCreateInfo pipelineLayoutCI{};
                 pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
                 pipelineLayoutCI.setLayoutCount = 1;
-                pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.irradiancemap;
-                if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.irradiancemap) != VK_SUCCESS) {
+                pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.env_texuture;
+                if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.env_texuture) != VK_SUCCESS) {
                     throw std::runtime_error("failed to create pipeline layout!");
                 }
             }
 
-            auto compute_shader_code = Utils::File::ReadFile("../shaders/compute/irmap_cs.spv");
-            VkShaderModule compute_shader_module = vkUtilities::CreateShaderModule(compute_shader_code, m_device);
-
-            const VkPipelineShaderStageCreateInfo shaderStage = {
-                VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_module, "main", nullptr,
-            };
-
-            VkComputePipelineCreateInfo compute_create_Info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-            compute_create_Info.stage = shaderStage;
-            compute_create_Info.layout = m_pipeline_layouts.irradiancemap;
-
-            if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &compute_create_Info, nullptr, &m_pipelines.irradiancemap) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to create compute pipeline");
-            }
-
-            vkDestroyShaderModule(m_device, compute_shader_module, nullptr);
+            //auto compute_shader_code = Utils::File::ReadFile("../shaders/compute/spmap_cs.spv");
+            //VkShaderModule compute_shader_module = vkUtilities::CreateShaderModule(compute_shader_code, m_device);
+            //
+            //const VkSpecializationMapEntry specializationMap = { 0, 0, sizeof(uint32_t) };
+            //const uint32_t specializationData[] = { 0 };
+            //
+            //const VkSpecializationInfo specializationInfo = { 1, &specializationMap, sizeof(specializationData), specializationData };
+            //
+            //const VkPipelineShaderStageCreateInfo shaderStage = {
+            //    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_module, "main", &specializationInfo,
+            //};
+            //
+            //VkComputePipelineCreateInfo compute_create_Info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+            //compute_create_Info.stage = shaderStage;
+            //compute_create_Info.layout = m_pipeline_layouts.env_texuture;
+            //compute_create_Info.basePipelineHandle = VK_NULL_HANDLE;
+            //compute_create_Info.pNext = nullptr;
+            //
+            //if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &compute_create_Info, nullptr, &m_pipelines.env_texuture) != VK_SUCCESS) {
+            //    throw std::runtime_error("Failed to create compute pipeline");
+            //}
+            //
+            //vkDestroyShaderModule(m_device, compute_shader_module, nullptr);
         }
 
         // converting equirenctangular to cubemap
-        {
-            const VkDescriptorImageInfo inputTexture = { VK_NULL_HANDLE, m_cubemap.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-            const VkDescriptorImageInfo outputTexture = { VK_NULL_HANDLE, m_irradiancemap.view, VK_IMAGE_LAYOUT_GENERAL };
-            //updateDescriptorSet(m_descriptor_sets.compute, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { inputTexture });
-            {
-                VkWriteDescriptorSet writeDescriptorSet = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-                writeDescriptorSet.dstSet = m_descriptor_sets.irradiancemap;
-                writeDescriptorSet.dstBinding = 0;
-                writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                writeDescriptorSet.descriptorCount = 1;
-                writeDescriptorSet.pImageInfo = &inputTexture;
-                vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSet, 0, nullptr);
-            }
-            //updateDescriptorSet(m_descriptor_sets.compute, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, { outputTexture });
-            {
-                VkWriteDescriptorSet writeDescriptorSet = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-                writeDescriptorSet.dstSet = m_descriptor_sets.irradiancemap;
-                writeDescriptorSet.dstBinding = 1;
-                writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-                writeDescriptorSet.descriptorCount = 1;
-                writeDescriptorSet.pImageInfo = &outputTexture;
-                vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSet, 0, nullptr);
-            }
-
+        {   
             VkCommandBuffer layoutCmd = vkUtilities::BeginSingleTimeCommands(m_command_pool, m_device);
             {
-                //const auto preDispatchBarrier = ImageMemoryBarrier(envTextureUnfiltered, 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL).mipLevels(0, 1);
+                std::vector<VkImageMemoryBarrier> preCopyBarriers;
+                preCopyBarriers.resize(2);
                 {
-                    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                    barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.image = m_irradiancemap.image;
-                    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-                    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-                    vkCmdPipelineBarrier(layoutCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+                    VkImageMemoryBarrier barrier1 = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    barrier1.srcAccessMask = 0;
+                    barrier1.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    barrier1.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    barrier1.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    barrier1.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier1.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier1.image = m_cubemap.image;
+                    barrier1.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    barrier1.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+                    barrier1.subresourceRange.baseMipLevel = 0;
+                    barrier1.subresourceRange.levelCount = 1;
+
+                    VkImageMemoryBarrier barrier2 = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    barrier2.srcAccessMask = 0;
+                    barrier2.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    barrier2.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                    barrier2.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    barrier2.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier2.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier2.image = m_env_texuture.image;
+                    barrier2.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    barrier2.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+                    barrier2.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+                    preCopyBarriers[0] = barrier1;
+                    preCopyBarriers[1] = barrier2;
                 }
 
-                vkCmdBindPipeline(layoutCmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines.irradiancemap);
-                vkCmdBindDescriptorSets(layoutCmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layouts.irradiancemap, 0, 1, &m_descriptor_sets.irradiancemap, 0, nullptr);
-                vkCmdDispatch(layoutCmd, offscreen_size / 32, offscreen_size / 32, 6);
-
-                //const auto postDispatchBarrier = ImageMemoryBarrier(envTextureUnfiltered, VK_ACCESS_SHADER_WRITE_BIT, 0, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL).mipLevels(0, 1);
+                std::vector<VkImageMemoryBarrier> postCopyBarriers;
+                postCopyBarriers.resize(2);
                 {
-                    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-                    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                    barrier.dstAccessMask = 0;
-                    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-                    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.image = m_irradiancemap.image;
-                    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-                    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-                    vkCmdPipelineBarrier(layoutCmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+                    VkImageMemoryBarrier barrier1 = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    barrier1.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    barrier1.dstAccessMask = 0;
+                    barrier1.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    barrier1.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    barrier1.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier1.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier1.image = m_cubemap.image;
+                    barrier1.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    barrier1.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+                    barrier1.subresourceRange.baseMipLevel = 0;
+                    barrier1.subresourceRange.levelCount = 1;
+
+                    VkImageMemoryBarrier barrier2 = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    barrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    barrier2.dstAccessMask = 0;
+                    barrier2.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    barrier2.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    barrier2.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier2.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier2.image = m_env_texuture.image;
+                    barrier2.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    barrier2.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+                    barrier2.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+                    postCopyBarriers[0] = barrier1;
+                    postCopyBarriers[1] = barrier2;
                 }
+
+                vkCmdPipelineBarrier(layoutCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, preCopyBarriers.size(), preCopyBarriers.data());
+
+                VkImageCopy copyRegion = {};
+                uint32_t width = offscreen_size;
+                uint32_t height = offscreen_size;
+                copyRegion.extent = { width, height, 1 };
+                copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                copyRegion.srcSubresource.layerCount = 6;
+                copyRegion.dstSubresource = copyRegion.srcSubresource;
+                vkCmdCopyImage(layoutCmd,
+                    m_cubemap.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    m_env_texuture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1, &copyRegion);
+
+                vkCmdPipelineBarrier(layoutCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, postCopyBarriers.size(), postCopyBarriers.data());
             }
             vkUtilities::EndSingleTimeCommands(layoutCmd, m_device, m_graphics_queue, m_command_pool);
 
-            vkDestroyPipeline(m_device, m_pipelines.irradiancemap, nullptr);
-            //destroyTexture(envTextureEquirect);
+            //vkDestroyPipeline(m_device, m_pipelines.env_texuture, nullptr);
         }
         // --------------- END - Converting cubemap to irradiance map - END ------------------
-
     }
     
     void GraphicsDevice::SetupSkybox() {
@@ -918,8 +945,8 @@ namespace Diffuse {
             buffer_info.buffer = m_ubo.uniformBuffers[0];
             buffer_info.offset = 0;
             buffer_info.range = sizeof(UBO);
-            //VkDescriptorImageInfo image_info = { m_irradiancemap.sampler, m_irradiancemap.view, m_irradiancemap.layout};
-            VkDescriptorImageInfo image_info = { m_cubemap.sampler, m_cubemap.view, m_cubemap.layout};
+            //VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
+            VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
 
             std::vector<VkWriteDescriptorSet> write_descriptor_sets;
             write_descriptor_sets.resize(2);
@@ -940,7 +967,7 @@ namespace Diffuse {
             vkUpdateDescriptorSets(m_device, write_descriptor_sets.size(), write_descriptor_sets.data(), 0, nullptr);
         }
 
-        // create skybox equirectangular pipeline
+        // create skybox cubemap pipeline
         {
             auto vert_shader_code = Utils::File::ReadFile("../shaders/skybox/skybox_vert.spv");
             auto frag_shader_code = Utils::File::ReadFile("../shaders/skybox/skybox_frag.spv");
@@ -998,6 +1025,7 @@ namespace Diffuse {
             rasterizer.depthBiasEnable = VK_FALSE;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+            //multisampleState.rasterizationSamples = static_cast<VkSampleCountFlagBits>(m_renderTargets[0].samples);
             multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
             VkPipelineMultisampleStateCreateInfo multi_sampling{};
@@ -1016,17 +1044,16 @@ namespace Diffuse {
             depthStencil.depthBoundsTestEnable = VK_FALSE;
             depthStencil.stencilTestEnable = VK_FALSE;
 
-            std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments{};
-            color_blend_attachments.resize(1);
-            color_blend_attachments[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            color_blend_attachments[0].blendEnable = VK_FALSE;
+            VkPipelineColorBlendAttachmentState color_blend_attachment{};
+            color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            color_blend_attachment.blendEnable = VK_FALSE;
 
             VkPipelineColorBlendStateCreateInfo color_blending{};
             color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
             color_blending.logicOpEnable = VK_FALSE;
             color_blending.logicOp = VK_LOGIC_OP_COPY;
-            color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachments.size());
-            color_blending.pAttachments = color_blend_attachments.data();
+            color_blending.attachmentCount = 1;
+            color_blending.pAttachments = &color_blend_attachment;
             color_blending.blendConstants[0] = 0.0f;
             color_blending.blendConstants[1] = 0.0f;
             color_blending.blendConstants[2] = 0.0f;
@@ -1057,6 +1084,8 @@ namespace Diffuse {
             pipeline_info.renderPass = m_render_pass;
             pipeline_info.subpass = 0;
             pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+            pipeline_info.pNext = nullptr;
+            
 
             if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_pipelines.skybox) != VK_SUCCESS) {
                 LOG_ERROR(false, "Failed to create graphics pipeline!");

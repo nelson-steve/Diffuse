@@ -202,7 +202,7 @@ namespace Diffuse {
             VkDescriptorSetLayout scene;
             VkDescriptorSetLayout skybox;
             VkDescriptorSetLayout compute;
-            VkDescriptorSetLayout irradiancemap;
+            VkDescriptorSetLayout env_texuture;
             VkDescriptorSetLayout material;
             VkDescriptorSetLayout node;
             VkDescriptorSetLayout materialBuffer;
@@ -212,22 +212,20 @@ namespace Diffuse {
             VkPipelineLayout scene;
             VkPipelineLayout skybox;
             VkPipelineLayout compute;
-            VkPipelineLayout irradiancemap;
+            VkPipelineLayout env_texuture;
         } m_pipeline_layouts;
         struct Pipelines {
             VkPipeline scene;
             VkPipeline skybox;
             VkPipeline compute;
-            VkPipeline irradiancemap;
-            VkPipeline skybox_equirectangular;
+            VkPipeline env_texuture;
         } m_pipelines;
 
         struct DescriptorSets {
             std::vector<VkDescriptorSet> scene;
             VkDescriptorSet skybox;
-            VkDescriptorSet skybox_equirectangular;
             VkDescriptorSet compute;
-            VkDescriptorSet irradiancemap;
+            VkDescriptorSet env_texuture;
         } m_descriptor_sets;
 
         struct {
@@ -250,7 +248,7 @@ namespace Diffuse {
             VkDeviceMemory memory;
             VkSampler sampler;
             VkImageLayout layout;
-        } m_irradiancemap;
+        } m_env_texuture;
 
         struct {
             VkImageView view;
