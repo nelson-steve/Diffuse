@@ -55,6 +55,7 @@ namespace Diffuse {
         void SetupSkybox();
         void SetupIBL();
         void SetupIBLCubemaps();
+        void GenerateBRDF_LUT();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
@@ -193,6 +194,24 @@ namespace Diffuse {
             float roughness;
         };
 
+        struct alignas(16) ShaderMaterial {
+            glm::vec4 baseColorFactor;
+            glm::vec4 emissiveFactor;
+            glm::vec4 diffuseFactor;
+            glm::vec4 specularFactor;
+            float workflow;
+            int colorTextureSet;
+            int PhysicalDescriptorTextureSet;
+            int normalTextureSet;
+            int occlusionTextureSet;
+            int emissiveTextureSet;
+            float metallicFactor;
+            float roughnessFactor;
+            float alphaMask;
+            float alphaMaskCutoff;
+            float emissiveStrength;
+        };
+
         struct DescriptorPools {
             VkDescriptorPool scene;
             VkDescriptorPool compute;
@@ -254,6 +273,16 @@ namespace Diffuse {
             VkDeviceMemory memory;
             VkSampler sampler;
             VkImageLayout layout;
+            uint32_t mipLevels = 0;
+            VkDescriptorImageInfo descriptor;
+        } m_brdf_lut;
+
+        struct {
+            VkImageView view;
+            VkImage image;
+            VkDeviceMemory memory;
+            VkSampler sampler;
+            VkImageLayout layout;
         } m_cubemap;
 
         struct {
@@ -285,7 +314,7 @@ namespace Diffuse {
         uint32_t m_render_samples = 0;
         Texture2D* hdr;
         bool only_once = false;
-        uint32_t offscreen_size = 2048;
+        uint32_t offscreen_size = 1024;
         // =====================================================
     };
 }

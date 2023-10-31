@@ -20,7 +20,7 @@ namespace Diffuse {
         m_graphics = new GraphicsDevice();
         model = new Model();
         skybox = new Model();
-        model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
+        model->Load("../assets/FlightHelmet/glTF/FlightHelmet.gltf", m_graphics);
         skybox->Load("../assets/Box.gltf", m_graphics);
         m_graphics->m_models.push_back(model);
         m_graphics->m_models.push_back(skybox);
