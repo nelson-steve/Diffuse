@@ -838,6 +838,73 @@ namespace Diffuse {
             vkUtilities::EndSingleTimeCommands(layoutCmd, m_device, m_graphics_queue, m_command_pool);
         }
         // --------------- END - Copying cubemap image texture to main texture - END ------------------
+
+        // --------------- Creating material buffer ------------------
+        std::vector<ShaderMaterial> shaderMaterials{};
+        for (auto& material : m_models[0]->GetMaterials()) {
+            ShaderMaterial shaderMaterial{};
+
+            shaderMaterial.emissiveFactor = glm::vec4(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2], 0);
+            // To save space, availabilty and texture coordinate set are combined
+            // -1 = texture not used for this material, >= 0 texture used and index of texture coordinate set
+            shaderMaterial.colorTextureSet = material.baseColorTexture != nullptr ? material.texCoordSets.baseColor : -1;
+            shaderMaterial.normalTextureSet = material.normalTexture != nullptr ? material.texCoordSets.normal : -1;
+            shaderMaterial.occlusionTextureSet = material.occlusionTexture != nullptr ? material.texCoordSets.occlusion : -1;
+            shaderMaterial.emissiveTextureSet = material.emissiveTexture != nullptr ? material.texCoordSets.emissive : -1;
+            shaderMaterial.alphaMask = static_cast<float>(material.alphaMode == Model::Material::ALPHAMODE_MASK);
+            shaderMaterial.alphaMaskCutoff = material.alphaCutoff;
+            shaderMaterial.emissiveStrength = material.emissiveStrength;
+
+            // TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
+
+            if (material.pbrWorkflows.metallicRoughness) {
+                // Metallic roughness workflow
+                shaderMaterial.workflow = static_cast<float>(PBRWorkflows::PBR_WORKFLOW_METALLIC_ROUGHNESS);
+                shaderMaterial.baseColorFactor = material.baseColorFactor;
+                shaderMaterial.metallicFactor = material.metallicFactor;
+                shaderMaterial.roughnessFactor = material.roughnessFactor;
+                shaderMaterial.PhysicalDescriptorTextureSet = material.metallicRoughnessTexture != nullptr ? material.texCoordSets.metallicRoughness : -1;
+                shaderMaterial.colorTextureSet = material.baseColorTexture != nullptr ? material.texCoordSets.baseColor : -1;
+            }
+
+            if (material.pbrWorkflows.specularGlossiness) {
+                // Specular glossiness workflow
+                shaderMaterial.workflow = static_cast<float>(PBR_WORKFLOW_SPECULAR_GLOSINESS);
+                shaderMaterial.PhysicalDescriptorTextureSet = material.extension.specularGlossinessTexture != nullptr ? material.texCoordSets.specularGlossiness : -1;
+                shaderMaterial.colorTextureSet = material.extension.diffuseTexture != nullptr ? material.texCoordSets.baseColor : -1;
+                shaderMaterial.diffuseFactor = material.extension.diffuseFactor;
+                shaderMaterial.specularFactor = glm::vec4(material.extension.specularFactor, 1.0f);
+            }
+
+            shaderMaterials.push_back(shaderMaterial);
+        }
+
+        if (shader_material_buffer.buffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(m_device, shader_material_buffer.buffer, nullptr);
+            vkFreeMemory(m_device, shader_material_buffer.memory, nullptr);
+            shader_material_buffer.buffer = VK_NULL_HANDLE;
+            shader_material_buffer.memory = VK_NULL_HANDLE;
+        }
+        VkDeviceSize bufferSize = shaderMaterials.size() * sizeof(ShaderMaterial);
+        Buffer stagingBuffer;
+        VK_CHECK_RESULT(vkUtilities::CreateBuffer(m_device, m_physical_device, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, bufferSize,
+            &stagingBuffer.buffer, &stagingBuffer.memory, shaderMaterials.data()));
+        VK_CHECK_RESULT(vkUtilities::CreateBuffer(m_device, m_physical_device, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bufferSize,
+            &shader_material_buffer.buffer, &shader_material_buffer.memory));
+
+        // Copy from staging buffers
+        VkCommandBuffer copyCmd = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+        VkBufferCopy copyRegion{};
+        copyRegion.size = bufferSize;
+        vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, shader_material_buffer.buffer, 1, &copyRegion);
+        FlushCommandBuffer(copyCmd, m_graphics_queue, true);
+        stagingBuffer.Destroy();
+
+        // Update descriptor
+        shader_material_buffer.descriptor.buffer = shader_material_buffer.buffer;
+        shader_material_buffer.descriptor.offset = 0;
+        shader_material_buffer.descriptor.range = bufferSize;
+        // --------------- END - Creating material buffer - END ------------------
     }
 
     void GraphicsDevice::SetupIBLCubemaps() {

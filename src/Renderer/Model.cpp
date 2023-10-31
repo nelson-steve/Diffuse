@@ -27,8 +27,6 @@ namespace Diffuse {
 		uint32_t vertex_count = 0;
 		uint32_t index_count = 0;
 		if (file_loaded) {
-			// TODO: Load material data
-			// Load Textures
 			for (tinygltf::Texture& tex : model.textures) {
 				tinygltf::Image image = model.images[tex.source];
 				TextureSampler texture_sampler;
@@ -80,6 +78,9 @@ namespace Diffuse {
 		if (indexBufferSize > 0) {
 			device->CreateIndexBuffer(m_indices.buffer, m_indices.memory, indexBufferSize, m_index_buffer);
 		}
+	}
+
+	void Model::LoadShaderMaterials(tinygltf::Model model) {
 	}
 
 	void Model::LoadMaterials(tinygltf::Model model) {

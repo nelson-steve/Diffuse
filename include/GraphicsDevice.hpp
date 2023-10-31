@@ -194,6 +194,8 @@ namespace Diffuse {
             float roughness;
         };
 
+        enum PBRWorkflows { PBR_WORKFLOW_METALLIC_ROUGHNESS = 0, PBR_WORKFLOW_SPECULAR_GLOSINESS = 1 };
+
         struct alignas(16) ShaderMaterial {
             glm::vec4 baseColorFactor;
             glm::vec4 emissiveFactor;
@@ -300,6 +302,12 @@ namespace Diffuse {
         } m_offscreen;
         std::array<VkImageView, 6> m_cubemap_face_image_views;
         VkSampler computeSampler;
+
+        struct {
+            VkBuffer buffer = VK_NULL_HANDLE;
+            VkDeviceMemory memory = VK_NULL_HANDLE;
+            VkDescriptorBufferInfo descriptor;
+        } shader_material_buffer;
 
         std::vector<VkFence> m_wait_fences;
         //std::vector<DescriptorSets> m_descriptor_sets;
