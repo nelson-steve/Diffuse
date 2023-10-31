@@ -54,6 +54,7 @@ namespace Diffuse {
         void Setup();
         void SetupSkybox();
         void SetupIBL();
+        void SetupIBLCubemaps();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
@@ -233,6 +234,19 @@ namespace Diffuse {
             std::vector<VkDeviceMemory> uniformBuffersMemory;
             std::vector<void*> uniformBuffersMapped;
         } m_ubo;
+
+        struct Cubemap {
+            VkImageView view;
+            VkImage image;
+            VkDeviceMemory memory;
+            VkSampler sampler;
+            VkImageLayout layout;
+            uint32_t mipLevels = 0;
+            VkDescriptorImageInfo descriptor;
+        };
+
+        Cubemap m_Irradiance_cubemap;
+        Cubemap m_Prefilter_cubemap;
 
         struct {
             VkImageView view;
