@@ -80,9 +80,6 @@ namespace Diffuse {
 		}
 	}
 
-	void Model::LoadShaderMaterials(tinygltf::Model model) {
-	}
-
 	void Model::LoadMaterials(tinygltf::Model model) {
 		for (tinygltf::Material& mat : model.materials) {
 			Material material{};

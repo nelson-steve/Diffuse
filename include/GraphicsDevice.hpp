@@ -56,6 +56,7 @@ namespace Diffuse {
         void SetupIBL();
         void SetupIBLCubemaps();
         void GenerateBRDF_LUT();
+        void SetupSceneData();
 
         // Getters
         std::shared_ptr<Window> GetWindow() const { return m_window; }
@@ -227,11 +228,13 @@ namespace Diffuse {
             VkDescriptorSetLayout env_texuture;
             VkDescriptorSetLayout material;
             VkDescriptorSetLayout node;
+            VkDescriptorSetLayout ibl;
             VkDescriptorSetLayout materialBuffer;
         } m_descriptorSetLayouts;
 
         struct PipelineLayouts{
             VkPipelineLayout scene;
+            VkPipelineLayout ibl;
             VkPipelineLayout skybox;
             VkPipelineLayout compute;
             VkPipelineLayout env_texuture;
@@ -248,6 +251,7 @@ namespace Diffuse {
             VkDescriptorSet skybox;
             VkDescriptorSet compute;
             VkDescriptorSet env_texuture;
+            VkDescriptorSet ibl;
         } m_descriptor_sets;
 
         struct {

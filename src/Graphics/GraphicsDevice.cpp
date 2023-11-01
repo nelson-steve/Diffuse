@@ -202,7 +202,8 @@ namespace Diffuse {
         sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, this);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
@@ -327,10 +328,11 @@ namespace Diffuse {
             }
         }
 
-        const std::array<VkDescriptorPoolSize, 3> poolSizes = { {
+        const std::array<VkDescriptorPoolSize, 4> poolSizes = { {
                 { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8 + imageSamplerCount * m_swapchain->GetImageCount() + 2 },
                 { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (8 + meshCount) * m_swapchain->GetImageCount() },
                 { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE , 8 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , 2 },
             } };
 
         VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -353,7 +355,7 @@ namespace Diffuse {
                 { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
                 { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
                 { 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-                { 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                //{ 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
         };
 
         VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
@@ -402,11 +404,11 @@ namespace Diffuse {
                 m_models[0]->GetMaterial(i).metallicRoughnessTexture->m_descriptor,
                 m_models[0]->GetMaterial(i).normalTexture->m_descriptor,
                 m_models[0]->GetMaterial(i).occlusionTexture->m_descriptor,
-                m_models[0]->GetMaterial(i).emissiveTexture->m_descriptor,
+                //m_models[0]->GetMaterial(i).emissiveTexture->m_descriptor,
             };
 
             std::vector<VkWriteDescriptorSet> descriptorWrites;
-            descriptorWrites.resize(6);
+            descriptorWrites.resize(5);
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[0].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
@@ -442,29 +444,85 @@ namespace Diffuse {
             descriptorWrites[4].descriptorCount = 1;
             descriptorWrites[4].pImageInfo = &image_descriptors[3];
 
-            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[5].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[5].dstBinding = 5;
-            descriptorWrites[5].descriptorCount = 1;
-            descriptorWrites[5].pImageInfo = &image_descriptors[4];
+            //descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            //descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            //descriptorWrites[5].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            //descriptorWrites[5].dstBinding = 5;
+            //descriptorWrites[5].descriptorCount = 1;
+            //descriptorWrites[5].pImageInfo = &image_descriptors[4];
 
             vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         }
 
-        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
-        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutCI.setLayoutCount = 1;
-        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayouts.scene;
-        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.scene) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create pipeline layout!");
-        }
-
-        CreateGraphicsPipeline();
         SetupIBL();
         SetupIBLCubemaps();
         SetupSkybox();
         GenerateBRDF_LUT();
+
+        {
+            std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
+                { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+            };
+
+            VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+            descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            descriptorSetLayoutCI.pBindings = set_layout_bindings.data();
+            descriptorSetLayoutCI.bindingCount = set_layout_bindings.size();
+            if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.ibl)) {
+                throw std::runtime_error("Failed to create descriptor pool");
+            }
+
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = m_descriptor_pools.scene;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &m_descriptorSetLayouts.ibl;
+
+            if (vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptor_sets.ibl) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate descriptor sets!");
+            }
+
+            std::vector<VkWriteDescriptorSet> descriptorWrites;
+            descriptorWrites.resize(3);
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[0].dstSet = m_descriptor_sets.ibl;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pImageInfo = &m_Irradiance_cubemap.descriptor;
+
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].dstSet = m_descriptor_sets.ibl;
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pImageInfo = &m_Prefilter_cubemap.descriptor;
+
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].dstSet = m_descriptor_sets.ibl;
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &m_brdf_lut.descriptor;
+
+            vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+        
+        }
+
+        std::vector<VkDescriptorSetLayout> set_layouts = {
+            m_descriptorSetLayouts.scene,
+            m_descriptorSetLayouts.ibl
+        };
+        VkPipelineLayoutCreateInfo pipelineLayoutCI{};
+        pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutCI.setLayoutCount = set_layouts.size();
+        pipelineLayoutCI.pSetLayouts = set_layouts.data();
+        if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.scene) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create pipeline layout!");
+        }
+        CreateGraphicsPipeline();
     }
 
     void GraphicsDevice::SetupIBL() {
@@ -680,7 +738,7 @@ namespace Diffuse {
             vkDestroyPipeline(m_device, m_pipelines.compute, nullptr);
             //destroyTexture(envTextureEquirect);
         }
-        // --------------- END - Converting equirectangular to cubemap - END ------------------
+        // --------------- END - Converting equirectangular to cubemap - END --------------
         // 
         // --------------- Copying cubemap image texture to main texture ------------------
         // Main Environment texture
@@ -851,7 +909,7 @@ namespace Diffuse {
             shaderMaterial.normalTextureSet = material.normalTexture != nullptr ? material.texCoordSets.normal : -1;
             shaderMaterial.occlusionTextureSet = material.occlusionTexture != nullptr ? material.texCoordSets.occlusion : -1;
             shaderMaterial.emissiveTextureSet = material.emissiveTexture != nullptr ? material.texCoordSets.emissive : -1;
-            shaderMaterial.alphaMask = static_cast<float>(material.alphaMode == Model::Material::ALPHAMODE_MASK);
+            shaderMaterial.alphaMask = static_cast<float>(material.alphaMode == Material::ALPHAMODE_MASK);
             shaderMaterial.alphaMaskCutoff = material.alphaCutoff;
             shaderMaterial.emissiveStrength = material.emissiveStrength;
 
@@ -898,7 +956,11 @@ namespace Diffuse {
         copyRegion.size = bufferSize;
         vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, shader_material_buffer.buffer, 1, &copyRegion);
         FlushCommandBuffer(copyCmd, m_graphics_queue, true);
-        stagingBuffer.Destroy();
+        //
+        vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+        vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+        stagingBuffer.buffer = VK_NULL_HANDLE;
+        stagingBuffer.memory = VK_NULL_HANDLE;
 
         // Update descriptor
         shader_material_buffer.descriptor.buffer = shader_material_buffer.buffer;
@@ -1151,7 +1213,7 @@ namespace Diffuse {
             struct PushBlockPrefilterEnv {
                 glm::mat4 mvp;
                 float roughness;
-                uint32_t numSamples = 32u;
+                uint32_t numSamples = 16u;
             } pushBlockPrefilterEnv;
 
             // Pipeline layout
@@ -1816,10 +1878,9 @@ namespace Diffuse {
             buffer_info.buffer = m_ubo.uniformBuffers[0];
             buffer_info.offset = 0;
             buffer_info.range = sizeof(UBO);
-            //VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
-            //VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
+            VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
             //VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
-            VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
+            //VkDescriptorImageInfo image_info = m_Prefilter_cubemap.descriptor;
 
             std::vector<VkWriteDescriptorSet> write_descriptor_sets;
             write_descriptor_sets.resize(2);
@@ -2024,8 +2085,8 @@ namespace Diffuse {
 
     void GraphicsDevice::CreateGraphicsPipeline() {
         // Create Graphics Pipeline
-        auto vert_shader_code = Utils::File::ReadFile("../shaders/pbr/pbr_vert.spv");
-        auto frag_shader_code = Utils::File::ReadFile("../shaders/pbr/pbr_frag.spv");
+        auto vert_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/pbribl_vert.spv");
+        auto frag_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/pbribl_frag.spv");
 
         VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
         VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
@@ -2284,7 +2345,6 @@ namespace Diffuse {
 
         //vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_sets.scene[m_current_frame_index], 0, nullptr);
         if(true){
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.scene);
             VkBuffer vertexBuffers[] = { m_models[0]->m_vertices.buffer };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
@@ -2305,9 +2365,17 @@ namespace Diffuse {
     void GraphicsDevice::DrawNode(Node* node, VkCommandBuffer commandBuffer) {
         if (node->mesh) {
             for (Primitive* primitive : node->mesh->primitives) {
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.scene);
                 uint32_t index = primitive->material_index > -1 ? primitive->material_index : 0;
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, 1, 
-                    &m_models[0]->GetMaterial(index).descriptorSet, 0, NULL);
+    			const std::vector<VkDescriptorSet> descriptorsets = {
+                    m_models[0]->GetMaterial(index).descriptorSet,
+					m_descriptor_sets.ibl
+				};
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, static_cast<uint32_t>(descriptorsets.size()), descriptorsets.data(), 0, NULL);
+                //vkCmdPushConstants(commandBuffer, m_pipeline_layouts.scene, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t), &primitive->material_index);
+
+                //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, 1, 
+                //    &m_models[0]->GetMaterial(index).descriptorSet, 0, NULL);
                 vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
             }
         }
