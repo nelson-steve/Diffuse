@@ -151,7 +151,7 @@ namespace Diffuse {
         //friend class Model;
         //friend class Texture2D;
         std::vector<Model*> m_models;
-        Texture2D* white_texture;
+        Texture2D* m_white_texture;
 
     private:
         std::shared_ptr<Window>         m_window;

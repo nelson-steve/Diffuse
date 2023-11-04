@@ -260,25 +260,40 @@ namespace Diffuse {
 
 	}
 
-	Texture2D::Texture2D(const std::string& path, VkFormat format, TextureSampler sampler, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device) {
+	Texture2D::Texture2D(const std::string& path, VkFormat format, TextureSampler sampler, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device, bool null_texture) {
 		m_graphics_device = graphics_device;
 		// Create Texture Image
 		int texWidth, texHeight, texChannels;
 		void* m_pixels;
 		m_mip_levels = 1; // default
 		VkDeviceSize imageSize;
-		if (stbi_is_hdr(path.c_str())) {
-			m_is_hdr = true;
-			float* pixels = stbi_loadf(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-			imageSize = (texWidth * (4 * sizeof(float))) * texHeight;
-			if (!pixels) {
-				throw std::runtime_error("failed to load texture image!");
+		if (!null_texture)
+		{
+			if (stbi_is_hdr(path.c_str())) {
+				m_is_hdr = true;
+				float* pixels = stbi_loadf(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+				imageSize = (texWidth * (4 * sizeof(float))) * texHeight;
+				if (!pixels) {
+					throw std::runtime_error("failed to load texture image!");
+				}
+				m_pixels = reinterpret_cast<unsigned char*>(pixels);
 			}
-			m_pixels = reinterpret_cast<unsigned char*>(pixels);
+			else {
+				bool m_is_hdr = false;
+				stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+				imageSize = (texWidth * (4 * sizeof(unsigned char))) * texHeight;
+				if (!pixels) {
+					throw std::runtime_error("failed to load texture image!");
+				}
+				m_pixels = pixels;
+			}
 		}
 		else {
 			bool m_is_hdr = false;
-			stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+			unsigned char* pixels[] = {0, 0, 0, 0};
+			texWidth = 1;
+			texHeight = 1;
+			texChannels = 4;
 			imageSize = (texWidth * (4 * sizeof(unsigned char))) * texHeight;
 			if (!pixels) {
 				throw std::runtime_error("failed to load texture image!");
@@ -288,14 +303,6 @@ namespace Diffuse {
 		m_width = texWidth;
 		m_height = texHeight;
 		assert(m_width > 0 && m_height > 0);
-
-		size_t pixel_data_size = 0;
-		if (m_is_hdr) {
-			pixel_data_size = (texWidth * (texChannels * sizeof(float))) * texHeight;
-		}
-		else {
-			pixel_data_size = (texWidth * (texChannels * sizeof(unsigned char))) * texHeight;
-		}
 
 		VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | additionalUsage;
 		usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // For mipmap generation

@@ -203,7 +203,7 @@ namespace Diffuse {
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
-        //white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, this);
+        m_white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, sampler, 0, this, true);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
         m_swapchain->Initialize();
@@ -385,25 +385,28 @@ namespace Diffuse {
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UBO);
 
+            if (m_models[0]->GetMaterial(i).baseColorTexture == nullptr) {
+                m_models[0]->GetMaterial(i).baseColorTexture = m_white_texture;
+            }
             if (m_models[0]->GetMaterial(i).metallicRoughnessTexture == nullptr) {
-                m_models[0]->GetMaterial(i).metallicRoughnessTexture = m_models[0]->GetMaterial(i).baseColorTexture;
+                m_models[0]->GetMaterial(i).metallicRoughnessTexture = m_white_texture;
             }
             if (m_models[0]->GetMaterial(i).normalTexture == nullptr) {
-                m_models[0]->GetMaterial(i).normalTexture = m_models[0]->GetMaterial(i).baseColorTexture;
+                m_models[0]->GetMaterial(i).normalTexture = m_white_texture;
             }
             if (m_models[0]->GetMaterial(i).occlusionTexture == nullptr) {
-                m_models[0]->GetMaterial(i).occlusionTexture = m_models[0]->GetMaterial(i).baseColorTexture;
+                m_models[0]->GetMaterial(i).occlusionTexture = m_white_texture;
             }
             if (m_models[0]->GetMaterial(i).emissiveTexture == nullptr) {
-                m_models[0]->GetMaterial(i).emissiveTexture = m_models[0]->GetMaterial(i).baseColorTexture;
+                m_models[0]->GetMaterial(i).emissiveTexture = m_white_texture;
             }
-            //VkDescriptorImageInfo temp = m_models[0]->GetMaterial(0).baseColorTexture->m_descriptor;
+
             std::vector<VkDescriptorImageInfo> image_descriptors = {
                 m_models[0]->GetMaterial(i).baseColorTexture->m_descriptor,
                 m_models[0]->GetMaterial(i).metallicRoughnessTexture->m_descriptor,
                 m_models[0]->GetMaterial(i).normalTexture->m_descriptor,
                 m_models[0]->GetMaterial(i).occlusionTexture->m_descriptor,
-                //m_models[0]->GetMaterial(i).emissiveTexture->m_descriptor,
+                m_models[0]->GetMaterial(i).emissiveTexture->m_descriptor,
             };
 
             std::vector<VkWriteDescriptorSet> descriptorWrites;
