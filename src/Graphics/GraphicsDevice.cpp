@@ -202,8 +202,8 @@ namespace Diffuse {
         sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        //hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
-        hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, this);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
@@ -979,19 +979,19 @@ namespace Diffuse {
 
             VkFormat format;
             int32_t dim;
-
+            uint32_t numMips;
             switch (target) {
             case IRRADIANCE:
                 format = VK_FORMAT_R32G32B32A32_SFLOAT;
                 dim = 32;
+                numMips = 1;
                 break;
             case PREFILTEREDENV:
                 format = VK_FORMAT_R16G16B16A16_SFLOAT;
                 dim = offscreen_size;
+                numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
                 break;
             };
-
-            const uint32_t numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
             // Create target cubemap
             {
@@ -1879,6 +1879,7 @@ namespace Diffuse {
             buffer_info.offset = 0;
             buffer_info.range = sizeof(UBO);
             VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
+            //VkDescriptorImageInfo image_info = { m_cubemap.sampler, m_cubemap.view, m_cubemap.layout};
             //VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
             //VkDescriptorImageInfo image_info = m_Prefilter_cubemap.descriptor;
 
@@ -2232,7 +2233,7 @@ namespace Diffuse {
         // Updating uniform buffers
         {
             UBO ubo{};
-            ubo.model = glm::mat4(1.0);
+            ubo.model = glm::rotate(glm::mat4(1.0), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             ubo.view = camera->GetView();
             ubo.proj = camera->GetProjection();
 
@@ -2376,7 +2377,8 @@ namespace Diffuse {
 
                 //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, 1, 
                 //    &m_models[0]->GetMaterial(index).descriptorSet, 0, NULL);
-                vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
+                vkCmdDraw(commandBuffer, primitive->vertex_count, 1, 0, 0);
+                //vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
             }
         }
         for (auto& child : node->children) {

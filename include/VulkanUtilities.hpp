@@ -69,6 +69,43 @@ namespace Diffuse {
 		static VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding, uint32_t descriptorCount = 1);
         static VkResult CreateBuffer(VkDevice device, VkPhysicalDevice physical_device, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, Buffer* buffer, VkDeviceSize size, void* data = nullptr);
         static VkResult CreateBuffer(VkDevice device, VkPhysicalDevice physical_device, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceSize size, VkBuffer* buffer, VkDeviceMemory* memory, void* data = nullptr);
+        static VkSamplerAddressMode GetVkWrapMode(int32_t wrapMode)
+        {
+            switch (wrapMode) {
+            case -1:
+            case 10497:
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case 33071:
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case 33648:
+                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            }
+
+            std::cerr << "Unknown wrap mode for getVkWrapMode: " << wrapMode << std::endl;
+            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        }
+
+        static VkFilter GetVkFilterMode(int32_t filterMode)
+        {
+            switch (filterMode) {
+            case -1:
+            case 9728:
+                return VK_FILTER_NEAREST;
+            case 9729:
+                return VK_FILTER_LINEAR;
+            case 9984:
+                return VK_FILTER_NEAREST;
+            case 9985:
+                return VK_FILTER_NEAREST;
+            case 9986:
+                return VK_FILTER_LINEAR;
+            case 9987:
+                return VK_FILTER_LINEAR;
+            }
+
+            std::cerr << "Unknown filter mode for getVkFilterMode: " << filterMode << std::endl;
+            return VK_FILTER_NEAREST;
+        }
 	};
 
     static VkPipelineShaderStageCreateInfo LoadShader(VkShaderModule module, VkShaderStageFlagBits stage)

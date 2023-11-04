@@ -1,7 +1,7 @@
 #pragma once
 
+#include "tiny_gltf.h"
 #include <vulkan/vulkan.hpp>
-#include "Model.hpp"
 
 namespace Diffuse {
 

@@ -1,7 +1,6 @@
 #include "Model.hpp"
 
 #include "GraphicsDevice.hpp"
-#include "Texture2D.hpp"
 
 namespace Diffuse {
 	void Model::Load(const std::string& path, GraphicsDevice* device) {
@@ -27,21 +26,30 @@ namespace Diffuse {
 		uint32_t vertex_count = 0;
 		uint32_t index_count = 0;
 		if (file_loaded) {
+			for (tinygltf::Sampler smpl : model.samplers) {
+				TextureSampler texture_sampler{};
+				texture_sampler.min_filter = vkUtilities::GetVkFilterMode(smpl.minFilter);
+				texture_sampler.mag_filter = vkUtilities::GetVkFilterMode(smpl.magFilter);
+				texture_sampler.address_modeU = vkUtilities::GetVkWrapMode(smpl.wrapS);
+				texture_sampler.address_modeV = vkUtilities::GetVkWrapMode(smpl.wrapT);
+				texture_sampler.address_modeW = texture_sampler.address_modeV;
+				m_texture_samplers.push_back(texture_sampler);
+			}
 			for (tinygltf::Texture& tex : model.textures) {
 				tinygltf::Image image = model.images[tex.source];
-				TextureSampler texture_sampler;
-				//if (tex.sampler == -1) 
+				TextureSampler texture_sampler{};
+				if (tex.sampler == -1) 
 				{
 					// No sampler specified, use a default one
-					texture_sampler.mag_filter = VK_FILTER_LINEAR;
 					texture_sampler.min_filter = VK_FILTER_LINEAR;
+					texture_sampler.mag_filter = VK_FILTER_LINEAR;
 					texture_sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 					texture_sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 					texture_sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 				}
-				//else {
-				//	textureSampler = textureSamplers[tex.sampler];
-				//}
+				else {
+					texture_sampler = m_texture_samplers[tex.sampler];
+				}
 				Texture2D* texture;
 				texture = new Texture2D(image, texture_sampler, device->Queue(), device);
 				m_textures.push_back(texture);
@@ -339,6 +347,9 @@ namespace Diffuse {
 						std::cerr << "Index component type " << accessor.componentType << " not supported!" << std::endl;
 						return;
 					}
+				}
+				else {
+					assert(false);
 				}
 				uint32_t mat_index = primitive.material > -1 ? primitive.material : -1;
 				Primitive* new_primitive = new Primitive(index_start, index_count, vertex_count, mat_index);

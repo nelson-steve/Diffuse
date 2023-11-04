@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Texture2D.hpp"
+
 #include "tiny_gltf.h"
 
 #include "glm/glm.hpp"
@@ -11,8 +13,6 @@
 namespace Diffuse {
 
 	class GraphicsDevice;
-	class Texture2D;
-	struct TextureSampler;
 
 	struct Vertex {
 		glm::vec3 pos;
@@ -124,6 +124,7 @@ namespace Diffuse {
 		std::vector<Node*> m_nodes;
 		std::vector<Node*> m_linear_nodes;
 		std::vector<Texture2D*> m_textures;
+		std::vector<TextureSampler> m_texture_samplers;
 		std::vector<Material> m_materials;
 		uint32_t* m_index_buffer;
 		Vertex* m_vertex_buffer;

@@ -11,7 +11,7 @@ namespace Diffuse {
 		m_front = glm::vec3(0.0, 0.0, 1.0);
 		m_up = glm::vec3(0.0, 1.0, 0.0);
 		m_right = glm::vec3(1.0, 0.0, 0.0);
-		m_sensitivity = 0.5f;
+		m_sensitivity = 0.2f;
 		m_speed = 0.2f;
 		m_yaw = 0.0f;
 		m_pitch = 0.0f;
