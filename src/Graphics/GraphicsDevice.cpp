@@ -21,7 +21,7 @@
 #define LOG_INFO(message)
 #endif
 
-#define M_PI 3.141592653589
+#define M_PI 3.141592653589793238
 
 #define VK_CHECK_RESULT(result) { assert(result == VK_SUCCESS); }
 
@@ -198,12 +198,13 @@ namespace Diffuse {
         TextureSampler sampler{};
         sampler.mag_filter = VK_FILTER_LINEAR;
         sampler.min_filter = VK_FILTER_LINEAR;
-        sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
-        m_white_texture = new Texture2D("../assets/white.jpeg", VK_FORMAT_R8G8B8A8_UNORM, sampler, 0, this, true);
+        m_white_texture = new Texture2D("NA", VK_FORMAT_R8G8B8A8_UNORM, sampler, 0, this, true);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
         m_swapchain->Initialize();
@@ -653,7 +654,7 @@ namespace Diffuse {
                 }
             }
 
-            auto compute_shader_code = Utils::File::ReadFile("../shaders/compute/equirect_to_cube_cs.spv");
+            auto compute_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/equirect_to_cube_cs.spv");
             VkShaderModule compute_shader_module = vkUtilities::CreateShaderModule(compute_shader_code, m_device);
 
             const VkPipelineShaderStageCreateInfo shaderStage = {
@@ -1313,7 +1314,7 @@ namespace Diffuse {
             pipelineCI.pStages = shaderStages.data();
             pipelineCI.renderPass = renderpass;
 
-            auto vert_shader_code = Utils::File::ReadFile("../shaders/ibl2/filtercube.vert.spv");
+            auto vert_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/filtercube.vert.spv");
 
             VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
 
@@ -1327,7 +1328,7 @@ namespace Diffuse {
             switch (target) {
                 case IRRADIANCE:
                 {
-                    auto frag_shader_code = Utils::File::ReadFile("../shaders/ibl2/irradiancecube.frag.spv");
+                    auto frag_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/irradiancecube.frag.spv");
                     VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
                     VkPipelineShaderStageCreateInfo frag_shader_stage_info{};
                     frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1339,7 +1340,7 @@ namespace Diffuse {
                 }
                 case PREFILTEREDENV:
                 {
-                    auto frag_shader_code = Utils::File::ReadFile("../shaders/ibl2/prefilterenvmap.frag.spv");
+                    auto frag_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/prefilterenvmap.frag.spv");
                     VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
                     VkPipelineShaderStageCreateInfo frag_shader_stage_info{};
                     frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1762,8 +1763,8 @@ namespace Diffuse {
         pipelineCI.stageCount = 2;
         pipelineCI.pStages = shaderStages.data();
 
-        auto vert_shader_code = Utils::File::ReadFile("../shaders/ibl2/genbrdflut.vert.spv");
-        auto frag_shader_code = Utils::File::ReadFile("../shaders/ibl2/genbrdflut.frag.spv");
+        auto vert_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/genbrdflut.vert.spv");
+        auto frag_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/genbrdflut.frag.spv");
 
         VkShaderModule vert_shader_module = vkUtilities::CreateShaderModule(vert_shader_code, m_device);
         VkShaderModule frag_shader_module = vkUtilities::CreateShaderModule(frag_shader_code, m_device);
@@ -1880,9 +1881,9 @@ namespace Diffuse {
             buffer_info.buffer = m_ubo.uniformBuffers[0];
             buffer_info.offset = 0;
             buffer_info.range = sizeof(UBO);
-            VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
+            //VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
             //VkDescriptorImageInfo image_info = { m_cubemap.sampler, m_cubemap.view, m_cubemap.layout};
-            //VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
+            VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
             //VkDescriptorImageInfo image_info = m_Prefilter_cubemap.descriptor;
 
             std::vector<VkWriteDescriptorSet> write_descriptor_sets;
@@ -2111,8 +2112,6 @@ namespace Diffuse {
         VkPipelineVertexInputStateCreateInfo vertex_input_info{};
         vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        //auto bindingDescription = Vertex::getBindingDescription();
-        //auto attributeDescriptions = Vertex::getAttributeDescriptions();
         VkVertexInputBindingDescription vertex_input_binding = { 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX };
         std::vector<VkVertexInputAttributeDescription> vertexInputAttributes = {
             { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
@@ -2244,7 +2243,9 @@ namespace Diffuse {
         // Updating uniform buffers
         {
             UBO ubo{};
-            ubo.model = glm::rotate(glm::mat4(1.0), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            ubo.model = glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            ubo.model = glm::rotate(ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            //ubo.model = glm::mat4(1.0);
             ubo.view = camera->GetView();
             ubo.proj = camera->GetProjection();
 

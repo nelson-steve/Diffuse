@@ -11,27 +11,32 @@ layout(push_constant) uniform PushConsts {
 	layout (offset = 68) float deltaTheta;
 } consts;
 
-#define PI 3.1415926535897932384626433832795
+#define PI 3.141592653589793238
 
 void main()
 {
 	vec3 N = normalize(inPos);
 	vec3 up = vec3(0.0, 1.0, 0.0);
 	vec3 right = normalize(cross(up, N));
-	up = cross(N, right);
+	up = normalize(cross(N, right));
 
 	const float TWO_PI = PI * 2.0;
 	const float HALF_PI = PI * 0.5;
 
 	vec3 color = vec3(0.0);
-	uint sampleCount = 0u;
+	float sampleCount = 0.0f;
 	for (float phi = 0.0; phi < TWO_PI; phi += consts.deltaPhi) {
 		for (float theta = 0.0; theta < HALF_PI; theta += consts.deltaTheta) {
-			vec3 tempVec = cos(phi) * right + sin(phi) * up;
-			vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
+			//vec3 tempVec = cos(phi) * right + sin(phi) * up;
+			//vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
+
+			// Convert spherical to cartesian.
+			vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+			// Convert tangent to world space.
+			vec3 sampleVector = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
 			color += texture(samplerEnv, sampleVector).rgb * cos(theta) * sin(theta);
 			sampleCount++;
 		}
 	}
-	outColor = vec4(PI * color / float(sampleCount), 1.0);
+	outColor = vec4(PI * color * (1.0 / float(sampleCount)), 1.0);
 }

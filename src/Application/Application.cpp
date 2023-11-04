@@ -21,7 +21,8 @@ namespace Diffuse {
         model = new Model();
         skybox = new Model();
         //model->Load("../assets/FlightHelmet/glTF/FlightHelmet.gltf", m_graphics);
-        model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
+        //model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
+        model->Load("../assets/revolver/revolver.gltf", m_graphics);
         //model->Load("../assets/ToyCar/glTF/ToyCar.gltf", m_graphics);
         skybox->Load("../assets/Box.gltf", m_graphics);
         m_graphics->m_models.push_back(model);
