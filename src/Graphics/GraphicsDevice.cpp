@@ -1,7 +1,6 @@
 #include "GraphicsDevice.hpp"
 #include "ReadFile.hpp"
 #include "Renderer.hpp"
-#include "Model.hpp"
 #include "Texture2D.hpp"
 
 #include "stb_image.h"
@@ -2130,7 +2129,6 @@ namespace Diffuse {
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -2139,26 +2137,22 @@ namespace Diffuse {
 
         VkPipelineRasterizationStateCreateInfo rasterizer{};
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        rasterizer.depthClampEnable = VK_FALSE;
-        rasterizer.rasterizerDiscardEnable = VK_FALSE;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-        rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        rasterizer.depthBiasEnable = VK_FALSE;
+        rasterizer.lineWidth = 1.0f;
 
         VkPipelineMultisampleStateCreateInfo multi_sampling{};
         multi_sampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multi_sampling.sampleShadingEnable = VK_FALSE;
         multi_sampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencil.depthTestEnable = VK_TRUE;
         depthStencil.depthWriteEnable = VK_TRUE;
-        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-        depthStencil.depthBoundsTestEnable = VK_FALSE;
-        depthStencil.stencilTestEnable = VK_FALSE;
+        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depthStencil.front = depthStencil.back;
+        depthStencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
         VkPipelineColorBlendAttachmentState color_blend_attachment{};
         color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -2166,14 +2160,8 @@ namespace Diffuse {
 
         VkPipelineColorBlendStateCreateInfo color_blending{};
         color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        color_blending.logicOpEnable = VK_FALSE;
-        color_blending.logicOp = VK_LOGIC_OP_COPY;
         color_blending.attachmentCount = 1;
         color_blending.pAttachments = &color_blend_attachment;
-        color_blending.blendConstants[0] = 0.0f;
-        color_blending.blendConstants[1] = 0.0f;
-        color_blending.blendConstants[2] = 0.0f;
-        color_blending.blendConstants[3] = 0.0f;
 
         std::vector<VkDynamicState> dynamic_states = {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -2183,6 +2171,7 @@ namespace Diffuse {
         dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
         dynamic_state.pDynamicStates = dynamic_states.data();
+        dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
 
         VkGraphicsPipelineCreateInfo pipeline_info{};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -2201,7 +2190,26 @@ namespace Diffuse {
         pipeline_info.subpass = 0;
         pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_pipelines.scene) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(m_device, m_pipeline_cache, 1, &pipeline_info, nullptr, &m_pipelines.pbr) != VK_SUCCESS) {
+            LOG_ERROR(false, "Failed to create graphics pipeline!");
+        }
+
+        // Double sided
+        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        if (vkCreateGraphicsPipelines(m_device, m_pipeline_cache, 1, &pipeline_info, nullptr, &m_pipelines.double_sided) != VK_SUCCESS) {
+            LOG_ERROR(false, "Failed to create graphics pipeline!");
+        }
+        // Alpha blending
+        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        color_blend_attachment.blendEnable = VK_TRUE;
+        color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        if (vkCreateGraphicsPipelines(m_device, m_pipeline_cache, 1, &pipeline_info, nullptr, &m_pipelines.alpha_blending) != VK_SUCCESS) {
             LOG_ERROR(false, "Failed to create graphics pipeline!");
         }
 
@@ -2352,7 +2360,15 @@ namespace Diffuse {
             vkCmdBindIndexBuffer(command_buffer, m_models[0]->m_indices.buffer, 0, VK_INDEX_TYPE_UINT32);
 
             for (auto& node : m_models[0]->GetNodes()) {
-            	DrawNode(node, command_buffer);
+            	DrawNode(node, command_buffer, Material::ALPHAMODE_OPAQUE);
+            }
+
+            for (auto& node : m_models[0]->GetNodes()) {
+                DrawNode(node, command_buffer, Material::ALPHAMODE_MASK);
+            }
+
+            for (auto& node : m_models[0]->GetNodes()) {
+                DrawNode(node, command_buffer, Material::ALPHAMODE_BLEND);
             }
         }
 
@@ -2363,10 +2379,20 @@ namespace Diffuse {
         }
     }
 
-    void GraphicsDevice::DrawNode(Node* node, VkCommandBuffer commandBuffer) {
+    void GraphicsDevice::DrawNode(Node* node, VkCommandBuffer commandBuffer, Material::AlphaMode alpha_mode) {
         if (node->mesh) {
             for (Primitive* primitive : node->mesh->primitives) {
-                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.scene);
+                {
+                    if (alpha_mode == Material::ALPHAMODE_BLEND) {
+                        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.alpha_blending);
+                    }
+                    else if (m_models[0]->GetMaterial(primitive->material_index).doubleSided) {
+                        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.double_sided);
+                    }
+                    else {
+                        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.pbr);
+                    }
+                }
                 uint32_t index = primitive->material_index > -1 ? primitive->material_index : 0;
     			const std::vector<VkDescriptorSet> descriptorsets = {
                     m_models[0]->GetMaterial(index).descriptorSet,
@@ -2377,12 +2403,12 @@ namespace Diffuse {
 
                 //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, 1, 
                 //    &m_models[0]->GetMaterial(index).descriptorSet, 0, NULL);
-                vkCmdDraw(commandBuffer, primitive->vertex_count, 1, 0, 0);
-                //vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
+                //vkCmdDraw(commandBuffer, primitive->vertex_count, 1, 0, 0);
+                vkCmdDrawIndexed(commandBuffer, primitive->index_count, 1, primitive->first_index, 0, 0);
             }
         }
         for (auto& child : node->children) {
-            DrawNode(child, commandBuffer);
+            DrawNode(child, commandBuffer, alpha_mode);
         }
     }
 

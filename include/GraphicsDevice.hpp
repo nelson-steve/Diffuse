@@ -4,6 +4,7 @@
 #include "Window.hpp"
 #include "Buffer.hpp"
 #include "Swapchain.hpp"
+#include "Model.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -67,7 +68,7 @@ namespace Diffuse {
         const VkSurfaceKHR& Surface() const { return m_surface; }
 
         void Draw(Camera* camera);
-        void DrawNode(Node* node, VkCommandBuffer commandBuffer);
+        void DrawNode(Node* node, VkCommandBuffer commandBuffer, Material::AlphaMode alpha_mode);
         void DrawNodeSkybox(Node* node, VkCommandBuffer commandBuffer);
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
@@ -240,7 +241,9 @@ namespace Diffuse {
             VkPipelineLayout env_texuture;
         } m_pipeline_layouts;
         struct Pipelines {
-            VkPipeline scene;
+            VkPipeline pbr;
+            VkPipeline alpha_blending;
+            VkPipeline double_sided;
             VkPipeline skybox;
             VkPipeline compute;
             VkPipeline env_texuture;
