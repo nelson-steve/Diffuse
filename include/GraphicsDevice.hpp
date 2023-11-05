@@ -46,6 +46,17 @@ namespace Diffuse {
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
+        glm::vec3 cam_pos;
+    };
+
+    struct UBOShaderValues {
+        glm::vec4 lightDir;
+        float exposure = 4.5f;
+        float gamma = 2.2f;
+        float prefilteredCubeMipLevels = 1.0F;
+        float scaleIBLAmbient = 1.0f;
+        float debugViewInputs = 0.0f;
+        float debugViewEquation = 0.0f;
     };
 
     class GraphicsDevice {
@@ -67,7 +78,7 @@ namespace Diffuse {
         const VkPhysicalDevice& PhysicalDevice() const { return m_physical_device; }
         const VkSurfaceKHR& Surface() const { return m_surface; }
 
-        void Draw(Camera* camera);
+        void Draw(Camera* camera, float dt);
         void DrawNode(Node* node, VkCommandBuffer commandBuffer, Material::AlphaMode alpha_mode);
         void DrawNodeSkybox(Node* node, VkCommandBuffer commandBuffer);
 
@@ -255,6 +266,7 @@ namespace Diffuse {
             VkDescriptorSet compute;
             VkDescriptorSet env_texuture;
             VkDescriptorSet ibl;
+            VkDescriptorSet materialBuffer;
         } m_descriptor_sets;
 
         struct {
@@ -262,6 +274,12 @@ namespace Diffuse {
             std::vector<VkDeviceMemory> uniformBuffersMemory;
             std::vector<void*> uniformBuffersMapped;
         } m_ubo;
+
+        struct {
+            std::vector<VkBuffer> uniformBuffers;
+            std::vector<VkDeviceMemory> uniformBuffersMemory;
+            std::vector<void*> uniformBuffersMapped;
+        } m_ubo_shader_values;
 
         struct Cubemap {
             VkImageView view;
@@ -330,6 +348,8 @@ namespace Diffuse {
         Texture2D* hdr;
         bool only_once = false;
         uint32_t offscreen_size = 1024;
+        uint32_t prefilter_mips = 1.0;
+        float increment = 1.0f;
         // =====================================================
     };
 }

@@ -8,6 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <math.h>
 #include <iostream>
 #include <set>
 
@@ -201,9 +202,10 @@ namespace Diffuse {
         sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
-        //hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/misty_morning.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         m_white_texture = new Texture2D("NA", VK_FORMAT_R8G8B8A8_UNORM, sampler, 0, this, true);
         // === Create Swap Chain ===
         m_swapchain = std::make_unique<Swapchain>(this);
@@ -350,12 +352,13 @@ namespace Diffuse {
         }
 
         std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
-                { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT,   nullptr },
-                { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,   nullptr },
+                { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_FRAGMENT_BIT,   nullptr },
                 { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
                 { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
                 { 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-                //{ 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                { 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
         };
 
         VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
@@ -386,20 +389,30 @@ namespace Diffuse {
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UBO);
 
+            VkDescriptorBufferInfo shaderValuesBufferInfo{};
+            shaderValuesBufferInfo.buffer = m_ubo_shader_values.uniformBuffers[0];
+            shaderValuesBufferInfo.offset = 0;
+            shaderValuesBufferInfo.range = sizeof(UBOShaderValues);
+
             if (m_models[0]->GetMaterial(i).baseColorTexture == nullptr) {
                 m_models[0]->GetMaterial(i).baseColorTexture = m_white_texture;
+                std::cout << "base color texture not found" << std::endl;
             }
             if (m_models[0]->GetMaterial(i).metallicRoughnessTexture == nullptr) {
                 m_models[0]->GetMaterial(i).metallicRoughnessTexture = m_white_texture;
+                std::cout << "metal roughness texture not found" << std::endl;
             }
             if (m_models[0]->GetMaterial(i).normalTexture == nullptr) {
                 m_models[0]->GetMaterial(i).normalTexture = m_white_texture;
+                std::cout << "normal texture not found" << std::endl;
             }
             if (m_models[0]->GetMaterial(i).occlusionTexture == nullptr) {
                 m_models[0]->GetMaterial(i).occlusionTexture = m_white_texture;
+                std::cout << "occlusion texture not found" << std::endl;
             }
             if (m_models[0]->GetMaterial(i).emissiveTexture == nullptr) {
                 m_models[0]->GetMaterial(i).emissiveTexture = m_white_texture;
+                std::cout << "emissive texture not found" << std::endl;
             }
 
             std::vector<VkDescriptorImageInfo> image_descriptors = {
@@ -411,7 +424,7 @@ namespace Diffuse {
             };
 
             std::vector<VkWriteDescriptorSet> descriptorWrites;
-            descriptorWrites.resize(5);
+            descriptorWrites.resize(7);
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[0].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
@@ -420,39 +433,46 @@ namespace Diffuse {
             descriptorWrites[0].pBufferInfo = &bufferInfo;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[1].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &image_descriptors[0];
+            descriptorWrites[1].pBufferInfo = &shaderValuesBufferInfo;
 
             descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[2].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
             descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &image_descriptors[1];
+            descriptorWrites[2].pImageInfo = &image_descriptors[0];
 
             descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[3].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
             descriptorWrites[3].dstBinding = 3;
             descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &image_descriptors[2];
+            descriptorWrites[3].pImageInfo = &image_descriptors[1];
 
             descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[4].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
             descriptorWrites[4].dstBinding = 4;
             descriptorWrites[4].descriptorCount = 1;
-            descriptorWrites[4].pImageInfo = &image_descriptors[3];
+            descriptorWrites[4].pImageInfo = &image_descriptors[2];
 
-            //descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            //descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            //descriptorWrites[5].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            //descriptorWrites[5].dstBinding = 5;
-            //descriptorWrites[5].descriptorCount = 1;
-            //descriptorWrites[5].pImageInfo = &image_descriptors[4];
+            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[5].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[5].dstBinding = 5;
+            descriptorWrites[5].descriptorCount = 1;
+            descriptorWrites[5].pImageInfo = &image_descriptors[3];
+
+            descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[6].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
+            descriptorWrites[6].dstBinding = 6;
+            descriptorWrites[6].descriptorCount = 1;
+            descriptorWrites[6].pImageInfo = &image_descriptors[4];
 
             vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         }
@@ -462,6 +482,7 @@ namespace Diffuse {
         SetupSkybox();
         GenerateBRDF_LUT();
 
+        // IBL cubemaps
         {
             std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
                 { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
@@ -511,17 +532,127 @@ namespace Diffuse {
             descriptorWrites[2].pImageInfo = &m_brdf_lut.descriptor;
 
             vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
-        
+        }
+
+        // Shader material
+        {
+            std::vector<ShaderMaterial> shaderMaterials{};
+            for (auto& material : m_models[0]->GetMaterials()) {
+                ShaderMaterial shaderMaterial{};
+
+                shaderMaterial.emissiveFactor = glm::vec4(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2], 0);
+                // To save space, availabilty and texture coordinate set are combined
+                // -1 = texture not used for this material, >= 0 texture used and index of texture coordinate set
+                shaderMaterial.colorTextureSet = material.baseColorTexture != nullptr ? material.texCoordSets.baseColor : -1;
+                shaderMaterial.normalTextureSet = material.normalTexture != nullptr ? material.texCoordSets.normal : -1;
+                shaderMaterial.occlusionTextureSet = material.occlusionTexture != nullptr ? material.texCoordSets.occlusion : -1;
+                shaderMaterial.emissiveTextureSet = material.emissiveTexture != nullptr ? material.texCoordSets.emissive : -1;
+                shaderMaterial.alphaMask = static_cast<float>(material.alphaMode == Material::ALPHAMODE_MASK);
+                shaderMaterial.alphaMaskCutoff = material.alphaCutoff;
+                shaderMaterial.emissiveStrength = material.emissiveStrength;
+
+                // TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
+
+                if (material.pbrWorkflows.metallicRoughness) {
+                    // Metallic roughness workflow
+                    shaderMaterial.workflow = static_cast<float>(PBRWorkflows::PBR_WORKFLOW_METALLIC_ROUGHNESS);
+                    shaderMaterial.baseColorFactor = material.baseColorFactor;
+                    shaderMaterial.metallicFactor = material.metallicFactor;
+                    shaderMaterial.roughnessFactor = material.roughnessFactor;
+                    shaderMaterial.PhysicalDescriptorTextureSet = material.metallicRoughnessTexture != nullptr ? material.texCoordSets.metallicRoughness : -1;
+                    shaderMaterial.colorTextureSet = material.baseColorTexture != nullptr ? material.texCoordSets.baseColor : -1;
+                }
+
+                if (material.pbrWorkflows.specularGlossiness) {
+                    // Specular glossiness workflow
+                    shaderMaterial.workflow = static_cast<float>(PBR_WORKFLOW_SPECULAR_GLOSINESS);
+                    shaderMaterial.PhysicalDescriptorTextureSet = material.extension.specularGlossinessTexture != nullptr ? material.texCoordSets.specularGlossiness : -1;
+                    shaderMaterial.colorTextureSet = material.extension.diffuseTexture != nullptr ? material.texCoordSets.baseColor : -1;
+                    shaderMaterial.diffuseFactor = material.extension.diffuseFactor;
+                    shaderMaterial.specularFactor = glm::vec4(material.extension.specularFactor, 1.0f);
+                }
+
+                shaderMaterials.push_back(shaderMaterial);
+            }
+
+            if (shader_material_buffer.buffer != VK_NULL_HANDLE) {
+                vkDestroyBuffer(m_device, shader_material_buffer.buffer, nullptr);
+                vkFreeMemory(m_device, shader_material_buffer.memory, nullptr);
+                shader_material_buffer.buffer = VK_NULL_HANDLE;
+                shader_material_buffer.memory = VK_NULL_HANDLE;
+            }
+            VkDeviceSize bufferSize = shaderMaterials.size() * sizeof(ShaderMaterial);
+            Buffer stagingBuffer;
+            VK_CHECK_RESULT(vkUtilities::CreateBuffer(m_device, m_physical_device, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, bufferSize,
+                &stagingBuffer.buffer, &stagingBuffer.memory, shaderMaterials.data()));
+            VK_CHECK_RESULT(vkUtilities::CreateBuffer(m_device, m_physical_device, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bufferSize,
+                &shader_material_buffer.buffer, &shader_material_buffer.memory));
+
+            // Copy from staging buffers
+            VkCommandBuffer copyCmd = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+            VkBufferCopy copyRegion{};
+            copyRegion.size = bufferSize;
+            vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, shader_material_buffer.buffer, 1, &copyRegion);
+            FlushCommandBuffer(copyCmd, m_graphics_queue, true);
+            //
+            vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+            vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+            stagingBuffer.buffer = VK_NULL_HANDLE;
+            stagingBuffer.memory = VK_NULL_HANDLE;
+
+            // Update descriptor
+            shader_material_buffer.descriptor.buffer = shader_material_buffer.buffer;
+            shader_material_buffer.descriptor.offset = 0;
+            shader_material_buffer.descriptor.range = bufferSize;
+
+            std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
+                { 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+            };
+
+            VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+            descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            descriptorSetLayoutCI.pBindings = set_layout_bindings.data();
+            descriptorSetLayoutCI.bindingCount = set_layout_bindings.size();
+            if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.materialBuffer)) {
+                throw std::runtime_error("Failed to create descriptor pool");
+            }
+
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = m_descriptor_pools.scene;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &m_descriptorSetLayouts.materialBuffer;
+
+            if (vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptor_sets.materialBuffer) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate descriptor sets!");
+            }
+
+            std::vector<VkWriteDescriptorSet> descriptorWrites;
+            descriptorWrites.resize(1);
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[0].dstSet = m_descriptor_sets.materialBuffer;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &shader_material_buffer.descriptor;
+
+            vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         }
 
         std::vector<VkDescriptorSetLayout> set_layouts = {
             m_descriptorSetLayouts.scene,
-            m_descriptorSetLayouts.ibl
+            m_descriptorSetLayouts.ibl,
+            m_descriptorSetLayouts.materialBuffer
         };
         VkPipelineLayoutCreateInfo pipelineLayoutCI{};
         pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutCI.setLayoutCount = set_layouts.size();
         pipelineLayoutCI.pSetLayouts = set_layouts.data();
+        VkPushConstantRange pushConstantRange{};
+        pushConstantRange.size = sizeof(uint32_t);
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        pipelineLayoutCI.pushConstantRangeCount = 1;
+        pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
         if (vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_pipeline_layouts.scene) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");
         }
@@ -899,77 +1030,6 @@ namespace Diffuse {
             vkUtilities::EndSingleTimeCommands(layoutCmd, m_device, m_graphics_queue, m_command_pool);
         }
         // --------------- END - Copying cubemap image texture to main texture - END ------------------
-
-        // --------------- Creating material buffer ------------------
-        std::vector<ShaderMaterial> shaderMaterials{};
-        for (auto& material : m_models[0]->GetMaterials()) {
-            ShaderMaterial shaderMaterial{};
-
-            shaderMaterial.emissiveFactor = glm::vec4(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2], 0);
-            // To save space, availabilty and texture coordinate set are combined
-            // -1 = texture not used for this material, >= 0 texture used and index of texture coordinate set
-            shaderMaterial.colorTextureSet = material.baseColorTexture != nullptr ? material.texCoordSets.baseColor : -1;
-            shaderMaterial.normalTextureSet = material.normalTexture != nullptr ? material.texCoordSets.normal : -1;
-            shaderMaterial.occlusionTextureSet = material.occlusionTexture != nullptr ? material.texCoordSets.occlusion : -1;
-            shaderMaterial.emissiveTextureSet = material.emissiveTexture != nullptr ? material.texCoordSets.emissive : -1;
-            shaderMaterial.alphaMask = static_cast<float>(material.alphaMode == Material::ALPHAMODE_MASK);
-            shaderMaterial.alphaMaskCutoff = material.alphaCutoff;
-            shaderMaterial.emissiveStrength = material.emissiveStrength;
-
-            // TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
-
-            if (material.pbrWorkflows.metallicRoughness) {
-                // Metallic roughness workflow
-                shaderMaterial.workflow = static_cast<float>(PBRWorkflows::PBR_WORKFLOW_METALLIC_ROUGHNESS);
-                shaderMaterial.baseColorFactor = material.baseColorFactor;
-                shaderMaterial.metallicFactor = material.metallicFactor;
-                shaderMaterial.roughnessFactor = material.roughnessFactor;
-                shaderMaterial.PhysicalDescriptorTextureSet = material.metallicRoughnessTexture != nullptr ? material.texCoordSets.metallicRoughness : -1;
-                shaderMaterial.colorTextureSet = material.baseColorTexture != nullptr ? material.texCoordSets.baseColor : -1;
-            }
-
-            if (material.pbrWorkflows.specularGlossiness) {
-                // Specular glossiness workflow
-                shaderMaterial.workflow = static_cast<float>(PBR_WORKFLOW_SPECULAR_GLOSINESS);
-                shaderMaterial.PhysicalDescriptorTextureSet = material.extension.specularGlossinessTexture != nullptr ? material.texCoordSets.specularGlossiness : -1;
-                shaderMaterial.colorTextureSet = material.extension.diffuseTexture != nullptr ? material.texCoordSets.baseColor : -1;
-                shaderMaterial.diffuseFactor = material.extension.diffuseFactor;
-                shaderMaterial.specularFactor = glm::vec4(material.extension.specularFactor, 1.0f);
-            }
-
-            shaderMaterials.push_back(shaderMaterial);
-        }
-
-        if (shader_material_buffer.buffer != VK_NULL_HANDLE) {
-            vkDestroyBuffer(m_device, shader_material_buffer.buffer, nullptr);
-            vkFreeMemory(m_device, shader_material_buffer.memory, nullptr);
-            shader_material_buffer.buffer = VK_NULL_HANDLE;
-            shader_material_buffer.memory = VK_NULL_HANDLE;
-        }
-        VkDeviceSize bufferSize = shaderMaterials.size() * sizeof(ShaderMaterial);
-        Buffer stagingBuffer;
-        VK_CHECK_RESULT(vkUtilities::CreateBuffer(m_device, m_physical_device, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, bufferSize,
-            &stagingBuffer.buffer, &stagingBuffer.memory, shaderMaterials.data()));
-        VK_CHECK_RESULT(vkUtilities::CreateBuffer(m_device, m_physical_device, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bufferSize,
-            &shader_material_buffer.buffer, &shader_material_buffer.memory));
-
-        // Copy from staging buffers
-        VkCommandBuffer copyCmd = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-        VkBufferCopy copyRegion{};
-        copyRegion.size = bufferSize;
-        vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, shader_material_buffer.buffer, 1, &copyRegion);
-        FlushCommandBuffer(copyCmd, m_graphics_queue, true);
-        //
-        vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
-        vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
-        stagingBuffer.buffer = VK_NULL_HANDLE;
-        stagingBuffer.memory = VK_NULL_HANDLE;
-
-        // Update descriptor
-        shader_material_buffer.descriptor.buffer = shader_material_buffer.buffer;
-        shader_material_buffer.descriptor.offset = 0;
-        shader_material_buffer.descriptor.range = bufferSize;
-        // --------------- END - Creating material buffer - END ------------------
     }
 
     void GraphicsDevice::SetupIBLCubemaps() {
@@ -987,14 +1047,14 @@ namespace Diffuse {
             case IRRADIANCE:
                 format = VK_FORMAT_R32G32B32A32_SFLOAT;
                 dim = 32;
-                numMips = 1;
+                //numMips = 1;
                 break;
             case PREFILTEREDENV:
                 format = VK_FORMAT_R16G16B16A16_SFLOAT;
                 dim = offscreen_size;
-                numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
                 break;
             };
+            numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
             // Create target cubemap
             {
@@ -1230,6 +1290,7 @@ namespace Diffuse {
                 break;
             case PREFILTEREDENV:
                 pushConstantRange.size = sizeof(PushBlockPrefilterEnv);
+                prefilter_mips = numMips;
                 break;
             };
 
@@ -1881,9 +1942,9 @@ namespace Diffuse {
             buffer_info.buffer = m_ubo.uniformBuffers[0];
             buffer_info.offset = 0;
             buffer_info.range = sizeof(UBO);
-            //VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
+            VkDescriptorImageInfo image_info = { m_env_texuture.sampler, m_env_texuture.view, m_env_texuture.layout};
             //VkDescriptorImageInfo image_info = { m_cubemap.sampler, m_cubemap.view, m_cubemap.layout};
-            VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
+            //VkDescriptorImageInfo image_info = m_Irradiance_cubemap.descriptor;
             //VkDescriptorImageInfo image_info = m_Prefilter_cubemap.descriptor;
 
             std::vector<VkWriteDescriptorSet> write_descriptor_sets;
@@ -2085,6 +2146,18 @@ namespace Diffuse {
 
             vkMapMemory(m_device, m_ubo.uniformBuffersMemory[i], 0, buffer_size, 0, &m_ubo.uniformBuffersMapped[i]);
         }
+
+        buffer_size = sizeof(UBOShaderValues);
+        m_ubo_shader_values.uniformBuffers.resize(m_render_ahead);
+        m_ubo_shader_values.uniformBuffersMemory.resize(m_render_ahead);
+        m_ubo_shader_values.uniformBuffersMapped.resize(m_render_ahead);
+        for (int i = 0; i < m_ubo_shader_values.uniformBuffers.size(); i++) {
+            vkUtilities::CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ubo_shader_values.uniformBuffers[i],
+                m_ubo_shader_values.uniformBuffersMemory[i], m_physical_device, m_device);
+
+            vkMapMemory(m_device, m_ubo_shader_values.uniformBuffersMemory[i], 0, buffer_size, 0, &m_ubo_shader_values.uniformBuffersMapped[i]);
+        }
     }
 
     void GraphicsDevice::CreateGraphicsPipeline() {
@@ -2118,7 +2191,7 @@ namespace Diffuse {
             { 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3 },
             { 2, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 6 },
             { 3, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 8 },
-            { 4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 10 }
+            { 4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 10 },
             //{ 5, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 14 },
             //{ 6, 0, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 18 }
         };
@@ -2219,7 +2292,7 @@ namespace Diffuse {
         vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
     }
 
-    void GraphicsDevice::Draw(Camera* camera) {
+    void GraphicsDevice::Draw(Camera* camera, float dt) {
         vkWaitForFences(m_device, 1, &m_wait_fences[m_current_frame_index], VK_TRUE, UINT64_MAX);
 
         if (m_framebuffer_resized) {
@@ -2242,14 +2315,34 @@ namespace Diffuse {
 
         // Updating uniform buffers
         {
+            static auto startTime = std::chrono::high_resolution_clock::now();
+
+            auto currentTime = std::chrono::high_resolution_clock::now();
+            float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
             UBO ubo{};
             ubo.model = glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            ubo.model = glm::rotate(ubo.model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             ubo.model = glm::rotate(ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            ubo.model = glm::rotate(ubo.model, time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             //ubo.model = glm::mat4(1.0);
             ubo.view = camera->GetView();
             ubo.proj = camera->GetProjection();
+            ubo.cam_pos = camera->GetPosition();
 
             memcpy(m_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
+        }
+        {
+            UBOShaderValues ubo{};
+            ubo.lightDir = glm::vec4(0.0f, 1.0, 1.0, 0.0);
+            ubo.exposure = 4.0f;
+            ubo.gamma = 2.0f;
+            ubo.prefilteredCubeMipLevels = prefilter_mips;
+            ubo.scaleIBLAmbient = 0.5f;
+            ubo.debugViewInputs = 0.0f;
+            ubo.debugViewEquation = 0.0f;
+
+            memcpy(m_ubo_shader_values.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
         }
 
         vkResetFences(m_device, 1, &m_wait_fences[m_current_frame_index]);
@@ -2400,10 +2493,11 @@ namespace Diffuse {
                 uint32_t index = primitive->material_index > -1 ? primitive->material_index : 0;
     			const std::vector<VkDescriptorSet> descriptorsets = {
                     m_models[0]->GetMaterial(index).descriptorSet,
-					m_descriptor_sets.ibl
+					m_descriptor_sets.ibl,
+					m_descriptor_sets.materialBuffer
 				};
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, static_cast<uint32_t>(descriptorsets.size()), descriptorsets.data(), 0, NULL);
-                //vkCmdPushConstants(commandBuffer, m_pipeline_layouts.scene, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t), &primitive->material_index);
+                vkCmdPushConstants(commandBuffer, m_pipeline_layouts.scene, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t), &primitive->material_index);
 
                 //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layouts.scene, 0, 1, 
                 //    &m_models[0]->GetMaterial(index).descriptorSet, 0, NULL);
