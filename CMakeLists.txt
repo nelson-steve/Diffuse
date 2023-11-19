@@ -9,6 +9,7 @@ set(SOURCES
     src/Graphics/tiny_gltf.cpp
     src/Graphics/GraphicsDevice.cpp
     src/Renderer/Model.cpp
+    src/Renderer/Scene.cpp
     src/Renderer/Texture2D.cpp
     src/Renderer/Renderer.cpp
     src/Renderer/Camera.cpp
@@ -27,6 +28,7 @@ set(HEADERS
     include/GraphicsDevice.hpp
     include/Swapchain.hpp
     include/Renderer.hpp
+    include/Scene.hpp
     include/Camera.hpp
     include/Window.hpp
     include/VulkanUtilities.hpp
@@ -54,9 +56,6 @@ find_package(glm REQUIRED)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/include, ${Vulkan_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/include, ${PROJECT_SOURCE_DIR}/dependencies/include)
 include_directories(${OPENGL_INCLUDE_DIR})
-
-message(${PROJECT_SOURCE_DIR})
-message(${Vulkan_LIBRARIES})
 
 target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/dependencies/lib/glfw3.lib)

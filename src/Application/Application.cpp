@@ -3,6 +3,7 @@
 #include "Renderer.hpp"
 #include "Model.hpp"
 #include "Camera.hpp"
+#include "Scene.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -15,7 +16,7 @@ namespace Diffuse {
     static Model* skybox;
 
     void Application::Init() {
-
+        Scene scene;
         camera = new Camera();
         m_graphics = new GraphicsDevice();
         model = new Model();
@@ -31,6 +32,9 @@ namespace Diffuse {
         //model = new Model("../assets/Avocado/Avocado.gltf", m_graphics);
         //model = new Model("../assets/Sponza/Sponza/glTF/Sponza.gltf", m_graphics);
         renderer = new Renderer(m_graphics);
+
+        SceneObect object;
+        scene.AddSceneObect(object);
     }
     void Application::Update()
     {
