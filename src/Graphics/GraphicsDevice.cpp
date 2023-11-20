@@ -195,15 +195,15 @@ namespace Diffuse {
         // SUCCESS
     }
 
-    void GraphicsDevice::Setup() {
+    void GraphicsDevice::Setup(std::shared_ptr<Scene> scene) {
         TextureSampler sampler{};
         sampler.mag_filter = VK_FILTER_LINEAR;
         sampler.min_filter = VK_FILTER_LINEAR;
         sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        //hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //hdr = new Texture2D("../assets/skybox/misty_morning.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         m_white_texture = new Texture2D("NA", VK_FORMAT_R8G8B8A8_UNORM, sampler, 0, this, true);
@@ -316,165 +316,167 @@ namespace Diffuse {
 
         CreateUniformBuffer();
 
-        uint32_t imageSamplerCount = 0;
-        uint32_t materialCount = 0;
-        uint32_t meshCount = 0;
+        for (auto& scene_object : scene->GetSceneObjects()) {
+            uint32_t imageSamplerCount = 0;
+            uint32_t materialCount = 0;
+            uint32_t meshCount = 0;
 
-        for (auto& material : m_models[0]->GetMaterials()) {
-            imageSamplerCount += 5;
-            materialCount++;
-        }
-        for (auto node : m_models[0]->GetLinearNodes()) {
-            if (node->mesh) {
-                meshCount++;
+            for (auto& material : scene_object->p_model.GetMaterials()) {
+                imageSamplerCount += 5;
+                materialCount++;
             }
-        }
-
-        const std::array<VkDescriptorPoolSize, 4> poolSizes = { {
-                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8 + imageSamplerCount * m_swapchain->GetImageCount() + 2 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (8 + meshCount) * m_swapchain->GetImageCount() },
-                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE , 8 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , 2 },
-            } };
-
-        VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        createInfo.maxSets = (8 + meshCount + materialCount) * m_swapchain->GetImageCount();
-        createInfo.poolSizeCount = (uint32_t)poolSizes.size();
-        createInfo.pPoolSizes = poolSizes.data();
-        if (vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pools.scene)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
-        pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
-                { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,   nullptr },
-                { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_FRAGMENT_BIT,   nullptr },
-                { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-                { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-                { 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-                { 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-                { 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-        };
-
-        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-        descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptorSetLayoutCI.pBindings = set_layout_bindings.data();
-        descriptorSetLayoutCI.bindingCount = set_layout_bindings.size();
-        if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        // Descriptor set
-        //std::vector<VkDescriptorSetLayout> layouts(m_render_ahead, m_descriptorSetLayouts.scene);
-        //m_descriptor_sets.scene.resize(m_render_ahead);
-
-        for (size_t i = 0; i < m_models[0]->GetMaterials().size(); i++) {
-            VkDescriptorSetAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            allocInfo.descriptorPool = m_descriptor_pools.scene;
-            allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts = &m_descriptorSetLayouts.scene;
-
-            if (vkAllocateDescriptorSets(m_device, &allocInfo, &(m_models[0]->GetMaterial(i).descriptorSet)) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate descriptor sets!");
+            for (auto node : scene_object->p_model.GetLinearNodes()) {
+                if (node->mesh) {
+                    meshCount++;
+                }
             }
 
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = m_ubo.uniformBuffers[0];
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UBO);
+            const std::array<VkDescriptorPoolSize, 4> poolSizes = { {
+                    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8 + imageSamplerCount * m_swapchain->GetImageCount() + 2 },
+                    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (8 + meshCount) * m_swapchain->GetImageCount() },
+                    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE , 8 },
+                    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , 2 },
+                } };
 
-            VkDescriptorBufferInfo shaderValuesBufferInfo{};
-            shaderValuesBufferInfo.buffer = m_ubo_shader_values.uniformBuffers[0];
-            shaderValuesBufferInfo.offset = 0;
-            shaderValuesBufferInfo.range = sizeof(UBOShaderValues);
-
-            if (m_models[0]->GetMaterial(i).baseColorTexture == nullptr) {
-                m_models[0]->GetMaterial(i).baseColorTexture = m_white_texture;
-                std::cout << "base color texture not found" << std::endl;
-            }
-            if (m_models[0]->GetMaterial(i).metallicRoughnessTexture == nullptr) {
-                m_models[0]->GetMaterial(i).metallicRoughnessTexture = m_white_texture;
-                std::cout << "metal roughness texture not found" << std::endl;
-            }
-            if (m_models[0]->GetMaterial(i).normalTexture == nullptr) {
-                m_models[0]->GetMaterial(i).normalTexture = m_white_texture;
-                std::cout << "normal texture not found" << std::endl;
-            }
-            if (m_models[0]->GetMaterial(i).occlusionTexture == nullptr) {
-                m_models[0]->GetMaterial(i).occlusionTexture = m_white_texture;
-                std::cout << "occlusion texture not found" << std::endl;
-            }
-            if (m_models[0]->GetMaterial(i).emissiveTexture == nullptr) {
-                m_models[0]->GetMaterial(i).emissiveTexture = m_white_texture;
-                std::cout << "emissive texture not found" << std::endl;
+            VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+            createInfo.maxSets = (8 + meshCount + materialCount) * m_swapchain->GetImageCount();
+            createInfo.poolSizeCount = (uint32_t)poolSizes.size();
+            createInfo.pPoolSizes = poolSizes.data();
+            if (vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptor_pools.scene)) {
+                throw std::runtime_error("Failed to create descriptor pool");
             }
 
-            std::vector<VkDescriptorImageInfo> image_descriptors = {
-                m_models[0]->GetMaterial(i).baseColorTexture->m_descriptor,
-                m_models[0]->GetMaterial(i).metallicRoughnessTexture->m_descriptor,
-                m_models[0]->GetMaterial(i).normalTexture->m_descriptor,
-                m_models[0]->GetMaterial(i).occlusionTexture->m_descriptor,
-                m_models[0]->GetMaterial(i).emissiveTexture->m_descriptor,
+            VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
+            pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+            if (vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipeline_cache)) {
+                throw std::runtime_error("Failed to create descriptor pool");
+            }
+
+            std::vector<VkDescriptorSetLayoutBinding> set_layout_bindings = {
+                    { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,   nullptr },
+                    { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_FRAGMENT_BIT,   nullptr },
+                    { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                    { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                    { 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                    { 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+                    { 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
             };
 
-            std::vector<VkWriteDescriptorSet> descriptorWrites;
-            descriptorWrites.resize(7);
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[0].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
+            VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+            descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            descriptorSetLayoutCI.pBindings = set_layout_bindings.data();
+            descriptorSetLayoutCI.bindingCount = set_layout_bindings.size();
+            if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayouts.scene)) {
+                throw std::runtime_error("Failed to create descriptor pool");
+            }
 
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[1].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &shaderValuesBufferInfo;
+            // Descriptor set
+            //std::vector<VkDescriptorSetLayout> layouts(m_render_ahead, m_descriptorSetLayouts.scene);
+            //m_descriptor_sets.scene.resize(m_render_ahead);
 
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[2].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &image_descriptors[0];
+            for (size_t i = 0; i < scene_object->p_model.GetMaterials().size(); i++) {
+                VkDescriptorSetAllocateInfo allocInfo{};
+                allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+                allocInfo.descriptorPool = m_descriptor_pools.scene;
+                allocInfo.descriptorSetCount = 1;
+                allocInfo.pSetLayouts = &m_descriptorSetLayouts.scene;
 
-            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[3].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[3].dstBinding = 3;
-            descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &image_descriptors[1];
+                if (vkAllocateDescriptorSets(m_device, &allocInfo, &(scene_object->p_model.GetMaterial(i).descriptorSet)) != VK_SUCCESS) {
+                    throw std::runtime_error("failed to allocate descriptor sets!");
+                }
 
-            descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[4].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[4].dstBinding = 4;
-            descriptorWrites[4].descriptorCount = 1;
-            descriptorWrites[4].pImageInfo = &image_descriptors[2];
+                VkDescriptorBufferInfo bufferInfo{};
+                bufferInfo.buffer = m_ubo.uniformBuffers[0];
+                bufferInfo.offset = 0;
+                bufferInfo.range = sizeof(UBO);
 
-            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[5].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[5].dstBinding = 5;
-            descriptorWrites[5].descriptorCount = 1;
-            descriptorWrites[5].pImageInfo = &image_descriptors[3];
+                VkDescriptorBufferInfo shaderValuesBufferInfo{};
+                shaderValuesBufferInfo.buffer = m_ubo_shader_values.uniformBuffers[0];
+                shaderValuesBufferInfo.offset = 0;
+                shaderValuesBufferInfo.range = sizeof(UBOShaderValues);
 
-            descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[6].dstSet = m_models[0]->GetMaterial(i).descriptorSet;
-            descriptorWrites[6].dstBinding = 6;
-            descriptorWrites[6].descriptorCount = 1;
-            descriptorWrites[6].pImageInfo = &image_descriptors[4];
+                if (scene_object->p_model.GetMaterial(i).baseColorTexture == nullptr) {
+                    scene_object->p_model.GetMaterial(i).baseColorTexture = m_white_texture;
+                    std::cout << "base color texture not found" << std::endl;
+                }
+                if (scene_object->p_model.GetMaterial(i).metallicRoughnessTexture == nullptr) {
+                    scene_object->p_model.GetMaterial(i).metallicRoughnessTexture = m_white_texture;
+                    std::cout << "metal roughness texture not found" << std::endl;
+                }
+                if (scene_object->p_model.GetMaterial(i).normalTexture == nullptr) {
+                    scene_object->p_model.GetMaterial(i).normalTexture = m_white_texture;
+                    std::cout << "normal texture not found" << std::endl;
+                }
+                if (scene_object->p_model.GetMaterial(i).occlusionTexture == nullptr) {
+                    scene_object->p_model.GetMaterial(i).occlusionTexture = m_white_texture;
+                    std::cout << "occlusion texture not found" << std::endl;
+                }
+                if (scene_object->p_model.GetMaterial(i).emissiveTexture == nullptr) {
+                    scene_object->p_model.GetMaterial(i).emissiveTexture = m_white_texture;
+                    std::cout << "emissive texture not found" << std::endl;
+                }
 
-            vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+                std::vector<VkDescriptorImageInfo> image_descriptors = {
+                    scene_object->p_model.GetMaterial(i).baseColorTexture->m_descriptor,
+                    scene_object->p_model.GetMaterial(i).metallicRoughnessTexture->m_descriptor,
+                    scene_object->p_model.GetMaterial(i).normalTexture->m_descriptor,
+                    scene_object->p_model.GetMaterial(i).occlusionTexture->m_descriptor,
+                    scene_object->p_model.GetMaterial(i).emissiveTexture->m_descriptor,
+                };
+
+                std::vector<VkWriteDescriptorSet> descriptorWrites;
+                descriptorWrites.resize(7);
+                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                descriptorWrites[0].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+                descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                descriptorWrites[1].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[1].dstBinding = 1;
+                descriptorWrites[1].descriptorCount = 1;
+                descriptorWrites[1].pBufferInfo = &shaderValuesBufferInfo;
+
+                descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[2].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[2].dstBinding = 2;
+                descriptorWrites[2].descriptorCount = 1;
+                descriptorWrites[2].pImageInfo = &image_descriptors[0];
+
+                descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[3].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[3].dstBinding = 3;
+                descriptorWrites[3].descriptorCount = 1;
+                descriptorWrites[3].pImageInfo = &image_descriptors[1];
+
+                descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[4].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[4].dstBinding = 4;
+                descriptorWrites[4].descriptorCount = 1;
+                descriptorWrites[4].pImageInfo = &image_descriptors[2];
+
+                descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[5].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[5].dstBinding = 5;
+                descriptorWrites[5].descriptorCount = 1;
+                descriptorWrites[5].pImageInfo = &image_descriptors[3];
+
+                descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[6].dstSet = scene_object->p_model.GetMaterial(i).descriptorSet;
+                descriptorWrites[6].dstBinding = 6;
+                descriptorWrites[6].descriptorCount = 1;
+                descriptorWrites[6].pImageInfo = &image_descriptors[4];
+
+                vkUpdateDescriptorSets(m_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+            }
         }
 
         SetupIBL();
@@ -2134,29 +2136,31 @@ namespace Diffuse {
         vkFreeMemory(m_device, stagingBufferMemory, nullptr);
     }
 
-    void GraphicsDevice::CreateUniformBuffer() {
-        VkDeviceSize buffer_size = sizeof(UBO);
-        m_ubo.uniformBuffers.resize(m_render_ahead);
-        m_ubo.uniformBuffersMemory.resize(m_render_ahead);
-        m_ubo.uniformBuffersMapped.resize(m_render_ahead);
-        for (int i = 0; i < m_ubo.uniformBuffers.size(); i++) {
-            vkUtilities::CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ubo.uniformBuffers[i],
-                m_ubo.uniformBuffersMemory[i], m_physical_device, m_device);
+    void GraphicsDevice::CreateUniformBuffer(const std::vector<std::shared_ptr<SceneObject>> objects) {
+        for (auto& object : objects) {
+            VkDeviceSize buffer_size = sizeof(UBO);
+            object->p_ubo.uniformBuffers.resize(m_render_ahead);
+            object->p_ubo.uniformBuffersMemory.resize(m_render_ahead);
+            object->p_ubo.uniformBuffersMapped.resize(m_render_ahead);
+            for (int i = 0; i < object->p_ubo.uniformBuffers.size(); i++) {
+                vkUtilities::CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, object->p_ubo.uniformBuffers[i],
+                    object->p_ubo.uniformBuffersMemory[i], m_physical_device, m_device);
 
-            vkMapMemory(m_device, m_ubo.uniformBuffersMemory[i], 0, buffer_size, 0, &m_ubo.uniformBuffersMapped[i]);
-        }
+                vkMapMemory(m_device, object->p_ubo.uniformBuffersMemory[i], 0, buffer_size, 0, &object->p_ubo.uniformBuffersMapped[i]);
+            }
 
-        buffer_size = sizeof(UBOShaderValues);
-        m_ubo_shader_values.uniformBuffers.resize(m_render_ahead);
-        m_ubo_shader_values.uniformBuffersMemory.resize(m_render_ahead);
-        m_ubo_shader_values.uniformBuffersMapped.resize(m_render_ahead);
-        for (int i = 0; i < m_ubo_shader_values.uniformBuffers.size(); i++) {
-            vkUtilities::CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ubo_shader_values.uniformBuffers[i],
-                m_ubo_shader_values.uniformBuffersMemory[i], m_physical_device, m_device);
+            buffer_size = sizeof(UBOShaderValues);
+            m_ubo_shader_values.uniformBuffers.resize(m_render_ahead);
+            m_ubo_shader_values.uniformBuffersMemory.resize(m_render_ahead);
+            m_ubo_shader_values.uniformBuffersMapped.resize(m_render_ahead);
+            for (int i = 0; i < m_ubo_shader_values.uniformBuffers.size(); i++) {
+                vkUtilities::CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ubo_shader_values.uniformBuffers[i],
+                    m_ubo_shader_values.uniformBuffersMemory[i], m_physical_device, m_device);
 
-            vkMapMemory(m_device, m_ubo_shader_values.uniformBuffersMemory[i], 0, buffer_size, 0, &m_ubo_shader_values.uniformBuffersMapped[i]);
+                vkMapMemory(m_device, m_ubo_shader_values.uniformBuffersMemory[i], 0, buffer_size, 0, &m_ubo_shader_values.uniformBuffersMapped[i]);
+            }
         }
     }
 

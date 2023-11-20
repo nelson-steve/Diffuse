@@ -10,31 +10,31 @@
 
 namespace Diffuse {
 
-    static Renderer* renderer;
-    static Camera* camera;
-    static Model* model;
-    static Model* skybox;
+    static std::shared_ptr<Renderer> g_renderer;
+    static std::shared_ptr<Scene> g_scene;
 
     void Application::Init() {
-        Scene scene;
-        camera = new Camera();
         m_graphics = new GraphicsDevice();
-        model = new Model();
-        skybox = new Model();
-        //model->Load("../assets/FlightHelmet/glTF/FlightHelmet.gltf", m_graphics);
-        model->Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
-        //model->Load("../assets/revolver/revolver.gltf", m_graphics);
-        //model->Load("../assets/ToyCar/glTF/ToyCar.gltf", m_graphics);
-        skybox->Load("../assets/Box.gltf", m_graphics);
-        m_graphics->m_models.push_back(model);
-        m_graphics->m_models.push_back(skybox);
+        g_scene = std::make_shared<Scene>();
+        //m_graphics->m_models.push_back(model);
+        //m_graphics->m_models.push_back(skybox);
         m_graphics->Setup();
-        //model = new Model("../assets/Avocado/Avocado.gltf", m_graphics);
-        //model = new Model("../assets/Sponza/Sponza/glTF/Sponza.gltf", m_graphics);
-        renderer = new Renderer(m_graphics);
 
-        SceneObect object;
-        scene.AddSceneObect(object);
+        g_renderer = std::make_shared<Renderer>(m_graphics);
+
+        // Creating a new scene
+        std::shared_ptr<SceneObect> object = std::make_shared<SceneObect>();
+        
+        // Creating a model that will be passed to scene as a scene object
+        object->p_model.Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
+        object->p_position = glm::vec3(0.0f);
+        object->p_scale = glm::vec3(1.0f);
+        object->p_rotation = glm::vec3(0.0f);
+        g_scene->AddSceneObect(object);
+
+        // Creating a new scene
+        std::shared_ptr<SceneCamera> scene_camera = std::make_shared<SceneCamera>();
+        g_scene->AddSceneCamera(scene_camera);
     }
     void Application::Update()
     {
@@ -43,20 +43,22 @@ namespace Diffuse {
         while (!m_graphics->GetWindow()->WindowShouldClose()) {
             m_graphics->GetWindow()->PollEvents();
 
+
+
             auto new_time = std::chrono::high_resolution_clock::now();
             float frame_time = std::chrono::duration<float, std::chrono::seconds::period>(new_time - current_time).count();
             current_time = new_time;
-            camera->Update(frame_time, m_graphics->GetWindow()->window());
-            //renderer->RenderModel(camera, frame_time, model);
 
-            m_graphics->Draw(camera, frame_time);
+            g_renderer->RenderScene(g_scene);
+            //camera->Update(frame_time, m_graphics->GetWindow()->window());
+
+
+            //m_graphics->Draw(camera, frame_time);
             //std::cout << "frame time: " << 1000.0f / frame_time << std::endl;
         }
     }
     void Application::Destroy()
     {
-        delete renderer;
-        delete model;
         m_graphics->CleanUp();
         delete m_graphics;
     }

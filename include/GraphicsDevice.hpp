@@ -5,6 +5,7 @@
 #include "Buffer.hpp"
 #include "Swapchain.hpp"
 #include "Model.hpp"
+#include "Scene.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -63,7 +64,7 @@ namespace Diffuse {
     public:
         // Constructor: Initializes Vulkan instances and creates a window
         GraphicsDevice(Config config = {});
-        void Setup();
+        void Setup(std::shared_ptr<Scene> scene);
         void SetupSkybox();
         void SetupIBL();
         void SetupIBLCubemaps();
@@ -84,7 +85,7 @@ namespace Diffuse {
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);
-        void CreateUniformBuffer();
+        void CreateUniformBuffer(const std::vector<std::shared_ptr<SceneObject>> objects);
 
         void RecordCommandBuffer(Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
@@ -273,7 +274,7 @@ namespace Diffuse {
             std::vector<VkBuffer> uniformBuffers;
             std::vector<VkDeviceMemory> uniformBuffersMemory;
             std::vector<void*> uniformBuffersMapped;
-        } m_ubo;
+        };
 
         struct {
             std::vector<VkBuffer> uniformBuffers;
