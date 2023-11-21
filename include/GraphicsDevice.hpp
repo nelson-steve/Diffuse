@@ -65,9 +65,9 @@ namespace Diffuse {
         // Constructor: Initializes Vulkan instances and creates a window
         GraphicsDevice(Config config = {});
         void Setup(std::shared_ptr<Scene> scene);
-        void SetupSkybox();
+        void SetupSkybox(std::shared_ptr<Skybox> skybox);
         void SetupIBL();
-        void SetupIBLCubemaps();
+        void SetupIBLCubemaps(std::shared_ptr<Scene> scene);
         void GenerateBRDF_LUT();
         void SetupSceneData();
 
@@ -79,15 +79,15 @@ namespace Diffuse {
         const VkPhysicalDevice& PhysicalDevice() const { return m_physical_device; }
         const VkSurfaceKHR& Surface() const { return m_surface; }
 
-        void Draw(Camera* camera, float dt);
-        void DrawNode(Node* node, VkCommandBuffer commandBuffer, Material::AlphaMode alpha_mode);
+        void Draw(std::shared_ptr<Scene> scene, Camera* camera, float dt);
+        void DrawNode(const std::shared_ptr<SceneObject> object, Node* node, VkCommandBuffer commandBuffer, Material::AlphaMode alpha_mode);
         void DrawNodeSkybox(Node* node, VkCommandBuffer commandBuffer);
 
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);
-        void CreateUniformBuffer(const std::vector<std::shared_ptr<SceneObject>> objects);
+        void CreateUniformBuffer(const std::shared_ptr<Scene> scene);
 
-        void RecordCommandBuffer(Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index);
+        void RecordCommandBuffer(std::shared_ptr<Scene> scene, Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
 
         VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin = false)
@@ -235,7 +235,7 @@ namespace Diffuse {
 
         struct DescriptorSetLayouts {
             VkDescriptorSetLayout empty;
-            VkDescriptorSetLayout scene;
+            VkDescriptorSetLayout model;
             VkDescriptorSetLayout skybox;
             VkDescriptorSetLayout compute;
             VkDescriptorSetLayout env_texuture;
@@ -280,7 +280,8 @@ namespace Diffuse {
             std::vector<VkBuffer> uniformBuffers;
             std::vector<VkDeviceMemory> uniformBuffersMemory;
             std::vector<void*> uniformBuffersMapped;
-        } m_ubo_shader_values;
+        };
+        //} m_ubo_shader_values;
 
         struct Cubemap {
             VkImageView view;
@@ -333,7 +334,8 @@ namespace Diffuse {
             VkBuffer buffer = VK_NULL_HANDLE;
             VkDeviceMemory memory = VK_NULL_HANDLE;
             VkDescriptorBufferInfo descriptor;
-        } shader_material_buffer;
+        };
+        //} shader_material_buffer;
 
         std::vector<VkFence> m_wait_fences;
         //std::vector<DescriptorSets> m_descriptor_sets;
