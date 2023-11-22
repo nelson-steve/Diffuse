@@ -53,7 +53,7 @@ namespace Diffuse {
 	};
 
 	struct SceneCamera {
-		Camera p_camera;
+		std::shared_ptr<Camera> p_camera;
 		glm::vec3 p_position;
 		glm::vec3 p_scale;
 		glm::vec3 p_rotation;
@@ -68,6 +68,7 @@ namespace Diffuse {
 		void AddSkybox(const std::shared_ptr<Skybox> skybox) { m_skybox = skybox; }
 		void AddSceneCamera(const std::shared_ptr<SceneCamera> camera) { m_scene_camera = camera; }
 
+		std::shared_ptr<SceneCamera> GetSceneCamera() { return m_scene_camera; }
 		std::vector<std::shared_ptr<SceneObject>> GetSceneObjects() const { return m_scene_objects; }
 		std::shared_ptr<Skybox> GetSkybox() const { return m_skybox; }
 	private:

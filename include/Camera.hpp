@@ -12,6 +12,8 @@ namespace Diffuse {
 
 		void Update(float dt, GLFWwindow* window);
 
+		void SetPosition(const glm::vec3& position);
+
 		glm::mat4 GetView() {
 			return m_view;
 			//return glm::lookAt(m_position, m_position + m_front, m_up);

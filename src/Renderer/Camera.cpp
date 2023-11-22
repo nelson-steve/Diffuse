@@ -6,7 +6,7 @@ namespace Diffuse {
 	Camera::Camera() {
 		m_position = glm::vec3(0.0f, 0.0f, 0.0f);
 		m_aspect = 1280.0f / 720.0f;
-		m_near = 0.1f; 
+		m_near = 0.1f;
 		m_far = 1000.0f;
 		m_front = glm::vec3(0.0, 0.0, 1.0);
 		m_up = glm::vec3(0.0, 1.0, 0.0);
@@ -18,6 +18,11 @@ namespace Diffuse {
 
 		m_projection = glm::perspective(glm::radians(45.0f), m_aspect, m_near, m_far);
 		m_view = glm::lookAt(m_position, m_position + m_front, m_up);
+	}
+
+	void Camera::SetPosition(const glm::vec3& position) {
+		m_position = position;
+		m_view = glm::lookAt(position, m_position + m_front, m_up);
 	}
 
 	void Camera::Update(float dt, GLFWwindow* window) {

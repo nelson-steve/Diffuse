@@ -12,35 +12,46 @@ namespace Diffuse {
 
     static std::shared_ptr<Renderer> g_renderer;
     static std::shared_ptr<Scene> g_scene;
-    static std::shared_ptr<Camera> g_camera;
+    //static std::shared_ptr<Camera> g_camera;
+    static std::shared_ptr<SceneCamera> g_scene_camera;
 
     void Application::Init() {
         m_graphics = new GraphicsDevice();
-        g_scene = std::make_shared<Scene>();
-        g_camera = std::make_shared<Camera>();
-        //m_graphics->m_models.push_back(model);
-        //m_graphics->m_models.push_back(skybox);
+        {
+            // Creating scene
+            g_scene = std::make_shared<Scene>();
 
-        // Creating a new scene
-        std::shared_ptr<SceneObject> object = std::make_shared<SceneObject>();
-        
-        // Creating a model that will be passed to scene as a scene object
-        object->p_model.Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
-        object->p_position = glm::vec3(0.0f);
-        object->p_scale = glm::vec3(1.0f);
-        object->p_rotation = glm::vec3(0.0f);
-        g_scene->AddSceneObect(object);
+            // creating scene camera
+            g_scene_camera = std::make_shared<SceneCamera>();
+            g_scene_camera->p_camera = std::make_shared<Camera>();
 
-        std::shared_ptr<Skybox> skybox = std::make_shared<Skybox>();
-        skybox->p_model.Load("../assets/Box.gltf", m_graphics);
+            // Createing scene object
+            std::shared_ptr<SceneObject> object1 = std::make_shared<SceneObject>();
+            object1->p_model.Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
+            object1->p_position = glm::vec3(1.0f, 0.0f, 0.0f);
+            object1->p_scale = glm::vec3(1.0f);
+            object1->p_rotation = glm::vec3(0.0f);
 
-        // Creating a new scene
-        std::shared_ptr<SceneCamera> scene_camera = std::make_shared<SceneCamera>();
-        g_scene->AddSceneCamera(scene_camera);
-        g_scene->AddSkybox(skybox);
+            std::shared_ptr<SceneObject> object2 = std::make_shared<SceneObject>();
+            object2->p_model.Load("../assets/FlightHelmet/glTF/FlightHelmet.gltf", m_graphics);
+            object2->p_position = glm::vec3(-1.0f, 0.0f, 0.0f);
+            object2->p_scale = glm::vec3(1.0f);
+            object2->p_rotation = glm::vec3(0.0f);
+            
+            // Creating skybox 
+            std::shared_ptr<Skybox> skybox = std::make_shared<Skybox>();
+            skybox->p_model.Load("../assets/Box.gltf", m_graphics);
 
-        m_graphics->Setup(g_scene);
-        g_renderer = std::make_shared<Renderer>(m_graphics);
+            // Adding scene objects
+            g_scene->AddSceneObect(object1);
+            g_scene->AddSceneObect(object2);
+            g_scene->AddSceneCamera(g_scene_camera);
+            g_scene->AddSkybox(skybox);
+
+            m_graphics->Setup(g_scene);
+            // Create renderer
+            g_renderer = std::make_shared<Renderer>(m_graphics);
+        }
     }
     void Application::Update()
     {
@@ -49,17 +60,13 @@ namespace Diffuse {
         while (!m_graphics->GetWindow()->WindowShouldClose()) {
             m_graphics->GetWindow()->PollEvents();
 
-
-
             auto new_time = std::chrono::high_resolution_clock::now();
             float frame_time = std::chrono::duration<float, std::chrono::seconds::period>(new_time - current_time).count();
             current_time = new_time;
 
-            g_renderer->RenderScene(g_scene, g_camera.get(), frame_time);
-            g_camera->Update(frame_time, m_graphics->GetWindow()->window());
+            g_renderer->RenderScene(g_scene, g_scene_camera->p_camera.get(), frame_time);
+            g_scene_camera->p_camera->Update(frame_time, m_graphics->GetWindow()->window());
 
-
-            //m_graphics->Draw(camera, frame_time);
             //std::cout << "frame time: " << 1000.0f / frame_time << std::endl;
         }
     }

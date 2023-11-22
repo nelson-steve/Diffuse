@@ -2332,6 +2332,7 @@ namespace Diffuse {
                 UBO ubo{};
                 ubo.model = glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
                 ubo.model = glm::rotate(ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                ubo.model = glm::translate(ubo.model, object->p_position);
                 ubo.view = camera->GetView();
                 ubo.proj = camera->GetProjection();
                 ubo.cam_pos = camera->GetPosition();
