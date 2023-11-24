@@ -201,9 +201,9 @@ namespace Diffuse {
         sampler.address_modeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler.address_modeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler.address_modeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
-        //hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
-        //hdr = new Texture2D("../assets/environment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/Shangai/shangai.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        hdr = new Texture2D("../assets/skybox/Desert/desert.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
+        //hdr = new Texture2D("../assets/skybox/Apartment/Apartment.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         //hdr = new Texture2D("../assets/skybox/misty_morning.hdr", VK_FORMAT_R32G32B32A32_SFLOAT, sampler, 0, this);
         m_white_texture = new Texture2D("NA", VK_FORMAT_R8G8B8A8_UNORM, sampler, 0, this, true);
         // === Create Swap Chain ===
@@ -2325,6 +2325,15 @@ namespace Diffuse {
             LOG_ERROR(false, "Failed to acquire swap chain image!");
         }
 
+        {
+            UBO ubo{};
+            ubo.model = glm::mat4(1.0f);
+            ubo.view = camera->GetView();
+            ubo.proj = camera->GetProjection();
+
+            memcpy(scene->GetSkybox()->p_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
+        }
+
         // Updating uniform buffers
         for(auto& object : scene->GetSceneObjects())
         {
@@ -2332,10 +2341,11 @@ namespace Diffuse {
                 UBO ubo{};
                 ubo.model = glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
                 ubo.model = glm::rotate(ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-                ubo.model = glm::translate(ubo.model, object->p_position);
+                //ubo.model = glm::translate(ubo.model, object->p_position);
+                //ubo.model = object->p_transform.get();
                 ubo.view = camera->GetView();
                 ubo.proj = camera->GetProjection();
-                ubo.cam_pos = camera->GetPosition();
+                //ubo.cam_pos = camera->GetPosition();
 
                 memcpy(object->p_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
             }

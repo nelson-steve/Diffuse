@@ -17,7 +17,7 @@
 
 namespace Diffuse {
     struct Config {
-        bool enable_validation_layers = true;
+        bool enable_validation_layers = false;
         const std::vector<const char*> validation_layers = {
             "VK_LAYER_KHRONOS_validation"
         };
@@ -47,7 +47,7 @@ namespace Diffuse {
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
-        glm::vec3 cam_pos;
+        //glm::vec3 cam_pos;
     };
 
     struct UBOShaderValues {

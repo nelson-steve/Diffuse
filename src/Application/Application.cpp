@@ -28,15 +28,9 @@ namespace Diffuse {
             // Createing scene object
             std::shared_ptr<SceneObject> object1 = std::make_shared<SceneObject>();
             object1->p_model.Load("../assets/damaged_helmet/DamagedHelmet.gltf", m_graphics);
-            object1->p_position = glm::vec3(1.0f, 0.0f, 0.0f);
-            object1->p_scale = glm::vec3(1.0f);
-            object1->p_rotation = glm::vec3(0.0f);
 
             std::shared_ptr<SceneObject> object2 = std::make_shared<SceneObject>();
             object2->p_model.Load("../assets/FlightHelmet/glTF/FlightHelmet.gltf", m_graphics);
-            object2->p_position = glm::vec3(-1.0f, 0.0f, 0.0f);
-            object2->p_scale = glm::vec3(1.0f);
-            object2->p_rotation = glm::vec3(0.0f);
             
             // Creating skybox 
             std::shared_ptr<Skybox> skybox = std::make_shared<Skybox>();
@@ -44,7 +38,7 @@ namespace Diffuse {
 
             // Adding scene objects
             g_scene->AddSceneObect(object1);
-            g_scene->AddSceneObect(object2);
+            //g_scene->AddSceneObect(object2);
             g_scene->AddSceneCamera(g_scene_camera);
             g_scene->AddSkybox(skybox);
 

@@ -12,9 +12,24 @@ namespace Diffuse {
 		//SceneObect(const std::string& path) {};
 		Model p_model;
 
-		glm::vec3 p_position{0.0f};
-		glm::vec3 p_scale{1.0f};
-		glm::vec3 p_rotation{0.0f};
+		struct transform{
+		public:
+			const glm::mat4& get() { return mat; }
+			void set_position(const glm::vec3& pos) { m_position = pos; update(); }
+			void set_scale(const glm::vec3& scale) { m_scale = scale; update(); }
+			void set_rotation(const glm::vec3& rot) { m_rotation = rot; update(); }
+		private:
+			void update() {
+				glm::mat4 rotation = glm::toMat4(glm::quat(m_rotation));
+				mat = glm::translate(glm::mat4(1.0f), m_position) * rotation * glm::scale(glm::mat4(1.0f), m_scale);
+			}
+		private:
+			glm::vec3 m_position{0.0f};
+			glm::vec3 m_scale{1.0f};
+			glm::vec3 m_rotation{0.0f};
+
+			glm::mat4 mat{1.0f};
+		} p_transform;
 
 		bool p_render = true;
 		

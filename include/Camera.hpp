@@ -16,12 +16,9 @@ namespace Diffuse {
 
 		glm::mat4 GetView() {
 			return m_view;
-			//return glm::lookAt(m_position, m_position + m_front, m_up);
-			//return glm::mat4_cast(m_rotation) * glm::translate(glm::mat4(1.0), - m_position); 
 		}
 		glm::mat4 GetProjection() const {
 			return m_projection;
-			//return glm::perspective(m_fov, m_aspect, m_near, m_far);
 		}
 		glm::vec3 GetPosition() const {
 			return m_position;
