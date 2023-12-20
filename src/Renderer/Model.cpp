@@ -3,6 +3,12 @@
 #include "GraphicsDevice.hpp"
 
 namespace Diffuse {
+	Model::~Model() {
+		for (auto node : m_nodes) {
+			delete node;
+		}
+	}
+
 	void Model::Load(const std::string& path, GraphicsDevice* device) {
 		tinygltf::TinyGLTF loader;
 		tinygltf::Model model;

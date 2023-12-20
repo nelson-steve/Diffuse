@@ -17,7 +17,7 @@
 
 namespace Diffuse {
     struct Config {
-        bool enable_validation_layers = false;
+        bool enable_validation_layers = true;
         const std::vector<const char*> validation_layers = {
             "VK_LAYER_KHRONOS_validation"
         };
@@ -86,6 +86,8 @@ namespace Diffuse {
         void CreateVertexBuffer(VkBuffer& vertex_buffer, VkDeviceMemory& vertex_buffer_memory, uint32_t buffer_size, const Vertex* vertices);
         void CreateIndexBuffer(VkBuffer& index_buffer, VkDeviceMemory& index_buffer_memory, uint32_t buffer_size, const uint32_t* indices);
         void CreateUniformBuffer(const std::shared_ptr<Scene> scene);
+
+        void DeleteUniformBuffers(const std::shared_ptr<Scene> scene);
 
         void RecordCommandBuffer(std::shared_ptr<Scene> scene, Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
@@ -201,6 +203,7 @@ namespace Diffuse {
         VkDebugUtilsMessengerCreateInfoEXT m_debug_create_info;
         //std::unordered_map<std::string, VkPipeline> pipelines;
         //VkPipeline boundPipeline;
+        std::shared_ptr<Scene> m_active_scene;
 
         struct SpecularFilterPushConstants
         {
@@ -234,7 +237,6 @@ namespace Diffuse {
         } m_descriptor_pools;
 
         struct DescriptorSetLayouts {
-            VkDescriptorSetLayout empty;
             VkDescriptorSetLayout model;
             VkDescriptorSetLayout skybox;
             VkDescriptorSetLayout compute;
@@ -269,19 +271,6 @@ namespace Diffuse {
             VkDescriptorSet ibl;
             VkDescriptorSet materialBuffer;
         } m_descriptor_sets;
-
-        struct {
-            std::vector<VkBuffer> uniformBuffers;
-            std::vector<VkDeviceMemory> uniformBuffersMemory;
-            std::vector<void*> uniformBuffersMapped;
-        };
-
-        struct {
-            std::vector<VkBuffer> uniformBuffers;
-            std::vector<VkDeviceMemory> uniformBuffersMemory;
-            std::vector<void*> uniformBuffersMapped;
-        };
-        //} m_ubo_shader_values;
 
         struct Cubemap {
             VkImageView view;

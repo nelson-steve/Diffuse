@@ -195,6 +195,8 @@ namespace Diffuse {
     }
 
     void GraphicsDevice::Setup(std::shared_ptr<Scene> scene) {
+        m_active_scene = scene;
+
         TextureSampler sampler{};
         sampler.mag_filter = VK_FILTER_LINEAR;
         sampler.min_filter = VK_FILTER_LINEAR;
@@ -2172,6 +2174,10 @@ namespace Diffuse {
         }
     }
 
+    void GraphicsDevice::DeleteUniformBuffers(const std::shared_ptr<Scene> scene) {
+
+    }
+
     void GraphicsDevice::CreateGraphicsPipeline() {
         // Create Graphics Pipeline
         auto vert_shader_code = Utils::File::ReadFile("../shaders/pbr_ibl/pbribl_vert.spv");
@@ -2557,22 +2563,40 @@ namespace Diffuse {
         glfwWaitEvents();
         vkDeviceWaitIdle(m_device);
         CleanUpSwapchain();
-        //vkDestroySampler(m_device, m_texture_sampler, nullptr);
-        //vkDestroyImageView(m_device, m_texture_image_view, nullptr);
-        //vkDestroyImage(m_device, m_texture_image, nullptr);
-        //vkFreeMemory(m_device, m_texture_image_memory, nullptr);
-        for (size_t i = 0; i < 1; i++) {
-            vkDestroyBuffer(m_device, m_uniform_buffers[i], nullptr);
-            vkFreeMemory(m_device, m_uniform_buffers_memory[i], nullptr);
+        for (size_t i = 0; i < m_render_ahead; i++) {
+            vkDestroyBuffer(m_device, m_active_scene->GetSkybox()->p_ubo.uniformBuffers[i], nullptr);
+            vkFreeMemory(m_device, m_active_scene->GetSkybox()->p_ubo.uniformBuffersMemory[i], nullptr);
         }
-        //vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
-        //vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
-        //vkDestroyBuffer(m_device, m_index_buffer, nullptr);
-        //vkFreeMemory(m_device, m_index_buffer_memory, nullptr);
-        //vkDestroyBuffer(m_device, m_vertex_buffer, nullptr);
-        //vkFreeMemory(m_device, m_vertex_buffer_memory, nullptr);
-        //vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
-        //vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+        for (int index = 0; index < m_active_scene->GetSceneObjects().size(); index++) {
+            for (size_t i = 0; i < m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffers.size(); i++) {
+                vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffers[i], nullptr);
+                vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffersMemory[i], nullptr);
+
+                vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_shader_values_ubo.uniformBuffers[i], nullptr);
+                vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_shader_values_ubo.uniformBuffersMemory[i], nullptr);
+            }
+            vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_shader_material_buffer.buffer, nullptr);
+            vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_shader_material_buffer.memory, nullptr);
+
+            // delete vertices
+            vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_model.m_vertices.buffer, nullptr);
+            vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.m_vertices.memory, nullptr);
+            // delete indices
+            vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_model.m_indices.buffer, nullptr);
+            vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.m_indices.memory, nullptr);
+        }
+        vkDestroyDescriptorPool(m_device, m_descriptor_pools.scene, nullptr);
+        // destroy descriptor sets layouts
+        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.model, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.skybox, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.material, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.node, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.ibl, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.materialBuffer, nullptr);
+        //
+        vkDestroyPipelineLayout(m_device, m_pipeline_layouts.scene, nullptr);
+        vkDestroyPipelineLayout(m_device, m_pipeline_layouts.compute, nullptr);
+        vkDestroyPipelineLayout(m_device, m_pipeline_layouts.skybox, nullptr);
         vkDestroyRenderPass(m_device, m_render_pass, nullptr);
         for (size_t i = 0; i < m_render_ahead; i++) {
             vkDestroySemaphore(m_device, m_render_complete_semaphores[i], nullptr);

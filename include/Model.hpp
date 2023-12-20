@@ -92,24 +92,37 @@ namespace Diffuse {
 		glm::mat4 matrix;
 		Mesh(const glm::mat4& mat)
 			:matrix(mat) {}
+		~Mesh() {
+			for (auto& p : primitives) {
+				delete p;
+			}
+		}
 	};
 
 	struct Node {
 		Node* parent;
 		uint32_t index;
 		std::vector<Node*> children;
-		Mesh* mesh;
+		Mesh* mesh = nullptr;
 		glm::mat4 matrix;
 		std::string name;
 		glm::vec3 translation;
 		glm::vec3 scale = glm::vec3(1.0f);
 		glm::quat rotation;
-		//~Ñode();
+		~Node() {
+			if (mesh) {
+				delete mesh;
+			}
+			for (auto& child : children) {
+				delete child;
+			}
+		}
 	};
 
 	class Model {
 	public:
-		Model() {}
+		Model() = default;
+		~Model();
 		void Load(const std::string& path, GraphicsDevice* device);
 		void GetNodeProps(const tinygltf::Node& node, const tinygltf::Model& model, uint32_t& vertex_count, uint32_t& index_count);
 		void LoadNode(Node* parent, const tinygltf::Node& node, uint32_t node_index, const tinygltf::Model& model);
