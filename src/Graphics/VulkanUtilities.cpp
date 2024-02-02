@@ -333,8 +333,8 @@ namespace Diffuse {
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 	}
 
-	void vkUtilities::UpdateUniformBuffers(Camera* camera, uint32_t current_image, VkExtent2D swap_chain_extent, std::vector<void*> uniform_buffers_mapped)
-	{
+	//void vkUtilities::UpdateUniformBuffers(Camera* camera, uint32_t current_image, VkExtent2D swap_chain_extent, std::vector<void*> uniform_buffers_mapped)
+	//{
 		//UniformBufferObject ubo{};
 		//ubo.model = glm::mat4(1.0f);
 		////ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
@@ -347,7 +347,7 @@ namespace Diffuse {
 		//ubo.proj[1][1] *= -1;
 
 		//memcpy(uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
-	}
+	//}
 
 	void vkUtilities::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool command_pool, VkDevice device, VkQueue graphics_queue) {
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommands(command_pool, device);

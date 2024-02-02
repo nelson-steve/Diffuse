@@ -10,7 +10,7 @@ namespace Diffuse {
 		Renderer() = delete;
 
 		void RenderScene(std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, float dt);
-		void RenderModel(Camera* camera, float dt, Model* model);
+		//void RenderModel(Camera* camera, float dt, Model* model);
 	private:
 		GraphicsDevice* device;
 	};

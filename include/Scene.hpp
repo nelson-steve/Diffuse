@@ -68,7 +68,7 @@ namespace Diffuse {
 	};
 
 	struct SceneCamera {
-		std::shared_ptr<Camera> p_camera;
+		//std::shared_ptr<Camera> p_camera;
 		glm::vec3 p_position;
 		glm::vec3 p_scale;
 		glm::vec3 p_rotation;
