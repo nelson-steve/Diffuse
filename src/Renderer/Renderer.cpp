@@ -12,7 +12,7 @@ namespace Diffuse {
         //device->Draw(camera, model);
 	}
 
-	void Renderer::RenderScene(const std::shared_ptr<Scene> scene, Camera* camera, float dt) {
+	void Renderer::RenderScene(const std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, float dt) {
 		device->Draw(scene, camera, dt);
 	}
 }

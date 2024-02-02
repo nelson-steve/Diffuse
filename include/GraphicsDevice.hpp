@@ -22,7 +22,8 @@ namespace Diffuse {
             "VK_LAYER_KHRONOS_validation"
         };
         const std::vector<const char*> required_device_extensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            //VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
         };
     };
 
@@ -79,7 +80,7 @@ namespace Diffuse {
         const VkPhysicalDevice& PhysicalDevice() const { return m_physical_device; }
         const VkSurfaceKHR& Surface() const { return m_surface; }
 
-        void Draw(std::shared_ptr<Scene> scene, Camera* camera, float dt);
+        void Draw(std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, float dt);
         void DrawNode(const std::shared_ptr<SceneObject> object, Node* node, VkCommandBuffer commandBuffer, Material::AlphaMode alpha_mode);
         void DrawNodeSkybox(Node* node, VkCommandBuffer commandBuffer);
 
@@ -89,7 +90,7 @@ namespace Diffuse {
 
         void DeleteUniformBuffers(const std::shared_ptr<Scene> scene);
 
-        void RecordCommandBuffer(std::shared_ptr<Scene> scene, Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index);
+        void RecordCommandBuffer(std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, VkCommandBuffer command_buffer, uint32_t image_index);
         void CreateGraphicsPipeline();
 
         VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin = false)

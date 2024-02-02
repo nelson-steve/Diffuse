@@ -8,6 +8,7 @@
 #include "tiny_gltf.h"
 
 #include <math.h>
+#include <chrono>
 #include <iostream>
 #include <set>
 
@@ -72,7 +73,8 @@ namespace Diffuse {
                 instance_create_info.ppEnabledLayerNames = config.validation_layers.data();
             }
 
-            if (config.enable_validation_layers) {
+            if (config.enable_validation_layers) 
+            {
                 m_debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
                 m_debug_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
                 m_debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -2310,7 +2312,7 @@ namespace Diffuse {
         vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
     }
 
-    void GraphicsDevice::Draw(std::shared_ptr<Scene> scene, Camera* camera, float dt) {
+    void GraphicsDevice::Draw(std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, float dt) {
         vkWaitForFences(m_device, 1, &m_wait_fences[m_current_frame_index], VK_TRUE, UINT64_MAX);
 
         if (m_framebuffer_resized) {
@@ -2334,7 +2336,7 @@ namespace Diffuse {
         {
             UBO ubo{};
             ubo.model = glm::mat4(1.0f);
-            ubo.view = camera->GetView();
+            ubo.view = camera->GetViewMatrix();
             ubo.proj = camera->GetProjection();
 
             memcpy(scene->GetSkybox()->p_ubo.uniformBuffersMapped[m_current_frame_index], &ubo, sizeof(ubo));
@@ -2349,7 +2351,7 @@ namespace Diffuse {
                 ubo.model = glm::rotate(ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
                 //ubo.model = glm::translate(ubo.model, object->p_position);
                 //ubo.model = object->p_transform.get();
-                ubo.view = camera->GetView();
+                ubo.view = camera->GetViewMatrix();
                 ubo.proj = camera->GetProjection();
                 //ubo.cam_pos = camera->GetPosition();
 
@@ -2421,7 +2423,7 @@ namespace Diffuse {
         m_current_frame_index = (m_current_frame_index + 1) % m_render_ahead;
     }
 
-    void GraphicsDevice::RecordCommandBuffer(std::shared_ptr<Scene> scene, Camera* camera, VkCommandBuffer command_buffer, uint32_t image_index) {
+    void GraphicsDevice::RecordCommandBuffer(std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, VkCommandBuffer command_buffer, uint32_t image_index) {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         if (vkBeginCommandBuffer(command_buffer, &beginInfo) != VK_SUCCESS) {

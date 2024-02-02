@@ -81,13 +81,15 @@ namespace Diffuse {
 	public:
 		void AddSceneObect(const std::shared_ptr<SceneObject> object) { m_scene_objects.push_back(object); }
 		void AddSkybox(const std::shared_ptr<Skybox> skybox) { m_skybox = skybox; }
-		void AddSceneCamera(const std::shared_ptr<SceneCamera> camera) { m_scene_camera = camera; }
+		//void AddSceneCamera(const std::shared_ptr<SceneCamera> camera) { m_scene_camera = camera; }
+		void AddEditorCamera(const std::shared_ptr<EditorCamera> camera) { m_editor_camera = camera; }
 
 		std::shared_ptr<SceneCamera> GetSceneCamera() { return m_scene_camera; }
 		std::vector<std::shared_ptr<SceneObject>> GetSceneObjects() const { return m_scene_objects; }
 		std::shared_ptr<Skybox> GetSkybox() const { return m_skybox; }
 	private:
 		std::shared_ptr<SceneCamera> m_scene_camera;
+		std::shared_ptr<EditorCamera> m_editor_camera;
 		std::shared_ptr<Skybox> m_skybox;
 		std::vector<std::shared_ptr<SceneObject>> m_scene_objects;
 	};
