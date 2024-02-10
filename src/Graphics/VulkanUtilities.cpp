@@ -62,6 +62,92 @@ namespace Diffuse {
 
 		return extensions;
 	}
+
+	void vkUtilities::CheckAvailableExtensions(VkPhysicalDevice device) {
+		VkResult result;
+
+		/*
+		 * From the link above:
+		 * If `pProperties` is NULL, then the number of extensions properties
+		 * available is returned in `pPropertyCount`.
+		 *
+		 * Basically, gets the number of extensions.
+		 */
+		uint32_t count = 0;
+		result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+		if (result != VK_SUCCESS) {
+			// Throw an exception or log the error
+		}
+
+		std::vector<VkExtensionProperties> extensionProperties(count);
+
+		// Get the extensions
+		result = vkEnumerateInstanceExtensionProperties(nullptr, &count, extensionProperties.data());
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+
+		//std::set<std::string> extensions;
+		std::cout << "Availble Instance Extension:" << std::endl;
+		for (auto& extension : extensionProperties) {
+			std::cout << extension.extensionName << std::endl;
+		}
+
+		result = vkEnumerateDeviceExtensionProperties(device, nullptr, &count, nullptr);
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+
+		extensionProperties.clear();
+		extensionProperties.resize(count);
+		std::vector<char> names;
+		names.resize(count);
+
+		result = vkEnumerateDeviceExtensionProperties(device, names.data(), &count, extensionProperties.data());
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+
+		std::cout << "Availble Device Extension:" << std::endl;
+		for (auto& extension : extensionProperties) {
+			std::cout << extension.extensionName << std::endl;
+		}
+
+		count = 0;
+		result = vkEnumerateDeviceLayerProperties(device, &count, nullptr);
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+
+		std::vector<VkLayerProperties> layers;
+		layers.resize(count);
+		result = vkEnumerateDeviceLayerProperties(device, &count, layers.data());
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+		std::cout << "Availble Device Layers:" << std::endl;
+		for (auto& layer : layers) {
+			std::cout << layer.layerName << std::endl;
+		}
+
+		count = 0;
+		result = vkEnumerateInstanceLayerProperties(&count, nullptr);
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+
+		layers.resize(count);
+		result = vkEnumerateInstanceLayerProperties(&count, layers.data());
+		if (result != VK_SUCCESS) {
+			assert(false);
+		}
+		std::cout << "Availble Instance Layers:" << std::endl;
+		for (auto& layer : layers) {
+			std::cout << layer.layerName << std::endl;
+		}
+
+	}
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
 		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 

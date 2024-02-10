@@ -17,7 +17,7 @@
 
 namespace Diffuse {
     struct Config {
-        bool enable_validation_layers = true;
+        bool enable_validation_layers = false;
         const std::vector<const char*> validation_layers = {
             "VK_LAYER_KHRONOS_validation"
         };
@@ -156,7 +156,7 @@ namespace Diffuse {
         // Swapchain
         void RecreateSwapchain();
 
-        void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
+        //void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
         //static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 
         // Cleanup
@@ -336,7 +336,7 @@ namespace Diffuse {
         // Other variables
         uint32_t m_current_frame_index = 0;
         uint32_t m_render_ahead = 1;
-        bool m_framebuffer_resized = false;
+        //bool m_framebuffer_resized = false;
         uint32_t m_render_samples = 0;
         Texture2D* hdr;
         bool only_once = false;

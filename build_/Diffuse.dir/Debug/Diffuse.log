@@ -1,0 +1,18 @@
+﻿  VulkanUtilities.cpp
+C:\files\dev\dev\Diffuse\include\Scene.hpp(77,24): warning C4305: 'initializing': truncation from 'double' to 'float'
+  (compiling source file '../src/Graphics/VulkanUtilities.cpp')
+  
+C:\files\dev\dev\Diffuse\include\GraphicsDevice.hpp(344,35): warning C4244: 'initializing': conversion from 'double' to 'uint32_t', possible loss of data
+  (compiling source file '../src/Graphics/VulkanUtilities.cpp')
+  
+  Buffer.cpp
+  main.cpp
+C:\files\dev\dev\Diffuse\include\Scene.hpp(77,24): warning C4305: 'initializing': truncation from 'double' to 'float'
+  (compiling source file '../src/main.cpp')
+  
+C:\files\dev\dev\Diffuse\include\GraphicsDevice.hpp(344,35): warning C4244: 'initializing': conversion from 'double' to 'uint32_t', possible loss of data
+  (compiling source file '../src/main.cpp')
+  
+  Generating Code...
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  Diffuse.vcxproj -> C:\files\dev\dev\Diffuse\build\Debug\Diffuse.exe

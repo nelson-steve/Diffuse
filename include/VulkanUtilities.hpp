@@ -32,6 +32,7 @@ namespace Diffuse {
 	public:
 		static bool CheckValidationLayerSupport(const std::vector<const char*> validation_layers);
 		static std::vector<const char*> GetRequiredExtensions(bool enableValidationLayers);
+        static void CheckAvailableExtensions(VkPhysicalDevice device);
 		static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
 			const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);

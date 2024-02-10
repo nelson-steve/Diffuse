@@ -1,5 +1,7 @@
 #include "Application.hpp"
 
+#include <iostream>
+
 int main(int argc, char** argv[]) {
     Diffuse::Application* app = new Diffuse::Application();
     app->Init();

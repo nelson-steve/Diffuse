@@ -27,21 +27,19 @@
 #define VK_CHECK_RESULT(result) { assert(result == VK_SUCCESS); }
 
 namespace Diffuse {
-    void FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
-        auto graphics = reinterpret_cast<GraphicsDevice*>(glfwGetWindowUserPointer(window));
-        graphics->SetFramebufferResized(true);
-    }
+    //void FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    //    auto graphics = reinterpret_cast<GraphicsDevice*>(glfwGetWindowUserPointer(window));
+    //    graphics->SetFramebufferResized(true);
+    //}
 
     GraphicsDevice::GraphicsDevice(Config config) {
         // === Initializing GLFW ===
         {
             int result = glfwInit();
             LOG_ERROR(result == GLFW_TRUE, "Failed to intitialize GLFW");
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
             m_window = std::make_unique<Window>();
-            glfwSetWindowUserPointer(m_window->window(), this);
-            glfwSetFramebufferSizeCallback(m_window->window(), FramebufferResizeCallback);
+            //glfwSetWindowUserPointer(m_window->window(), this);
+            //glfwSetFramebufferSizeCallback(m_window->window(), FramebufferResizeCallback);
         }
         
         // Check for validation layer support
@@ -73,7 +71,7 @@ namespace Diffuse {
                 instance_create_info.ppEnabledLayerNames = config.validation_layers.data();
             }
 
-            if (config.enable_validation_layers) 
+            if (config.enable_validation_layers)
             {
                 m_debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
                 m_debug_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -120,6 +118,8 @@ namespace Diffuse {
                 LOG_ERROR(false, "Failed to find a suitable GPU!");
             }
         }
+
+        vkUtilities::CheckAvailableExtensions(m_physical_device);
 
         // === Create Logical Device ===
         {
@@ -2315,9 +2315,9 @@ namespace Diffuse {
     void GraphicsDevice::Draw(std::shared_ptr<Scene> scene, std::shared_ptr<EditorCamera> camera, float dt) {
         vkWaitForFences(m_device, 1, &m_wait_fences[m_current_frame_index], VK_TRUE, UINT64_MAX);
 
-        if (m_framebuffer_resized) {
+        if (m_window->IsWindowResized()) {
             RecreateSwapchain();
-            m_framebuffer_resized = false;
+            m_window->WindowResized(false);
             return;
         }
 
@@ -2326,7 +2326,8 @@ namespace Diffuse {
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             RecreateSwapchain();
-            m_framebuffer_resized = false;
+            m_window->WindowResized(false);
+            //m_framebuffer_resized = false;
             return;
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -2413,8 +2414,9 @@ namespace Diffuse {
 
         result = vkQueuePresentKHR(m_present_queue, &presentInfo);
 
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebuffer_resized) {
-            m_framebuffer_resized = false;
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window->IsWindowResized()) {
+            m_window->WindowResized(false);
+            //m_framebuffer_resized = false;
             CleanUpSwapchain();
         }
         else if (result != VK_SUCCESS) {
