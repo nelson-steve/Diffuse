@@ -218,6 +218,7 @@ namespace Diffuse {
 			return func(instance, pCreateInfo, pAllocator, pReportCallback);
 		}
 		else {
+			std::cout << "Debug Utils Messenger extension not present" << std::endl;
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
 		}
 	}
@@ -227,6 +228,7 @@ namespace Diffuse {
 			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
 		}
 		else {
+			std::cout << "Debug Utils Messenger extension not present" << std::endl;
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
 		}
 	}

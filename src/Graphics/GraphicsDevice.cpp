@@ -66,9 +66,10 @@ namespace Diffuse {
             if (config.enable_validation_layers)
             {
                 vkUtilities::PopulateReportMessengerCreateInfo(m_report_create_info);
-                //vkUtilities::PopulateDebugMessengerCreateInfo(m_debug_create_info);
+                vkUtilities::PopulateDebugMessengerCreateInfo(m_debug_create_info);
 
                 instance_create_info.pNext = &m_report_create_info;
+                m_report_create_info.pNext = &m_debug_create_info;
             }
 
             if (vkCreateInstance(&instance_create_info, nullptr, &m_instance) != VK_SUCCESS) {
@@ -78,9 +79,22 @@ namespace Diffuse {
 
         // === Setup Debug Messenger ===
         {
-            if (config.enable_validation_layers) {
-                if (vkUtilities::CreateReportMessengerEXT(m_instance, &m_report_create_info, nullptr, &m_report_callback) != VK_SUCCESS) {
-                    LOG_WARN(false, "**Failed to set up report callback");
+            bool debugMessengerCreated = false;
+            if (config.enable_validation_layers) 
+            {
+                debugMessengerCreated = true;
+                // Attempt to create Debug Utils Messneger 
+                if (vkUtilities::CreateDebugUtilsMessengerEXT(m_instance, &m_debug_create_info, nullptr, &m_debug_messenger) != VK_SUCCESS) {
+                    debugMessengerCreated = false;
+                    LOG_WARN(false, "Failed to set up report callback");
+                }
+                // Attempt to create Report Callback
+                if (!debugMessengerCreated) {
+                    debugMessengerCreated = true;
+                    if (vkUtilities::CreateReportMessengerEXT(m_instance, &m_report_create_info, nullptr, &m_report_callback) != VK_SUCCESS) {
+                        debugMessengerCreated = false;
+                        LOG_WARN(false, "Failed to set up report callback");
+                    }
                 }
             }
         }
