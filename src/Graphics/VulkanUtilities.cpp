@@ -153,6 +153,12 @@ namespace Diffuse {
 
 		return VK_FALSE;
 	}
+	static VKAPI_ATTR VkBool32 VKAPI_CALL ReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
+		size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
+		std::cerr << "validation layer: " << pMessage << std::endl;
+
+		return VK_FALSE;
+	}
 	QueueFamilyIndices vkUtilities::FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
 		QueueFamilyIndices indices;
 
@@ -184,12 +190,36 @@ namespace Diffuse {
 
 		return indices;
 	}
+	void vkUtilities::PopulateReportMessengerCreateInfo(VkDebugReportCallbackCreateInfoEXT& createInfo) {
+		//VK_DEBUG_REPORT_INFORMATION_BIT_EXT = 0x00000001,
+		//	VK_DEBUG_REPORT_WARNING_BIT_EXT = 0x00000002,
+		//	VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT = 0x00000004,
+		//	VK_DEBUG_REPORT_ERROR_BIT_EXT = 0x00000008,
+		//	VK_DEBUG_REPORT_DEBUG_BIT_EXT = 0x00000010,
+		createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+		createInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+			VK_DEBUG_REPORT_WARNING_BIT_EXT |
+			VK_DEBUG_REPORT_ERROR_BIT_EXT |
+			VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+			VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+		createInfo.pfnCallback = ReportCallback;
+	}
 	void vkUtilities::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
 		createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = DebugCallback;
+	}
+	VkResult vkUtilities::CreateReportMessengerEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pReportCallback) {
+		auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+		if (func != nullptr) {
+			return func(instance, pCreateInfo, pAllocator, pReportCallback);
+		}
+		else {
+			return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
 	}
 	VkResult vkUtilities::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");

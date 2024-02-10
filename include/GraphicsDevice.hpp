@@ -17,7 +17,7 @@
 
 namespace Diffuse {
     struct Config {
-        bool enable_validation_layers = false;
+        bool enable_validation_layers = true;
         const std::vector<const char*> validation_layers = {
             "VK_LAYER_KHRONOS_validation"
         };
@@ -156,9 +156,6 @@ namespace Diffuse {
         // Swapchain
         void RecreateSwapchain();
 
-        //void SetFramebufferResized(bool resized) { m_framebuffer_resized = resized; }
-        //static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
-
         // Cleanup
         void CleanUp(const Config& config = {});
         void CleanUpSwapchain();
@@ -197,11 +194,13 @@ namespace Diffuse {
         std::vector<VkFence>            imagesInFlightFences;
         std::vector<VkBuffer>           m_uniform_buffers;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
+        VkDebugReportCallbackEXT        m_report_callback;
         std::vector<VkFramebuffer>      m_framebuffers;
         std::array<VkFramebuffer, 6>    m_offscreen_framebuffers;
         std::vector<VkDeviceMemory>     m_uniform_buffers_memory;
         std::vector<VkCommandBuffer>    m_command_buffers;
         VkDebugUtilsMessengerCreateInfoEXT m_debug_create_info;
+        VkDebugReportCallbackCreateInfoEXT m_report_create_info;
         //std::unordered_map<std::string, VkPipeline> pipelines;
         //VkPipeline boundPipeline;
         std::shared_ptr<Scene> m_active_scene;

@@ -27,19 +27,12 @@
 #define VK_CHECK_RESULT(result) { assert(result == VK_SUCCESS); }
 
 namespace Diffuse {
-    //void FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    //    auto graphics = reinterpret_cast<GraphicsDevice*>(glfwGetWindowUserPointer(window));
-    //    graphics->SetFramebufferResized(true);
-    //}
-
     GraphicsDevice::GraphicsDevice(Config config) {
         // === Initializing GLFW ===
         {
             int result = glfwInit();
             LOG_ERROR(result == GLFW_TRUE, "Failed to intitialize GLFW");
             m_window = std::make_unique<Window>();
-            //glfwSetWindowUserPointer(m_window->window(), this);
-            //glfwSetFramebufferSizeCallback(m_window->window(), FramebufferResizeCallback);
         }
         
         // Check for validation layer support
@@ -65,7 +58,6 @@ namespace Diffuse {
             instance_create_info.pApplicationInfo = &app_info;
             instance_create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
             instance_create_info.ppEnabledExtensionNames = extensions.data();
-            // TODO: Use multiple validation layers as a backup 
             if (config.enable_validation_layers) {
                 instance_create_info.enabledLayerCount = static_cast<uint32_t>(config.validation_layers.size());
                 instance_create_info.ppEnabledLayerNames = config.validation_layers.data();
@@ -73,12 +65,10 @@ namespace Diffuse {
 
             if (config.enable_validation_layers)
             {
-                m_debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-                m_debug_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-                m_debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-                vkUtilities::PopulateDebugMessengerCreateInfo(m_debug_create_info);
+                vkUtilities::PopulateReportMessengerCreateInfo(m_report_create_info);
+                //vkUtilities::PopulateDebugMessengerCreateInfo(m_debug_create_info);
 
-                instance_create_info.pNext = &m_debug_create_info;
+                instance_create_info.pNext = &m_report_create_info;
             }
 
             if (vkCreateInstance(&instance_create_info, nullptr, &m_instance) != VK_SUCCESS) {
@@ -89,8 +79,8 @@ namespace Diffuse {
         // === Setup Debug Messenger ===
         {
             if (config.enable_validation_layers) {
-                if (vkUtilities::CreateDebugUtilsMessengerEXT(m_instance, &m_debug_create_info, nullptr, &m_debug_messenger) != VK_SUCCESS) {
-                    LOG_WARN(false, "**Failed to set up debug messenger**");
+                if (vkUtilities::CreateReportMessengerEXT(m_instance, &m_report_create_info, nullptr, &m_report_callback) != VK_SUCCESS) {
+                    LOG_WARN(false, "**Failed to set up report callback");
                 }
             }
         }
