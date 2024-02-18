@@ -23,6 +23,8 @@ namespace Diffuse {
 		Texture2D(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, uint32_t levels, VkImageUsageFlags additionalUsage, GraphicsDevice* graphics_device);
         void UpdateDescriptor();
 
+
+
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
         uint32_t GetMipLevels() const { return m_mip_levels; }

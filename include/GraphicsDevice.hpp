@@ -192,7 +192,7 @@ namespace Diffuse {
         VkPhysicalDevice                m_physical_device;
         std::vector<void*>              m_uniform_buffers_mapped;
         std::vector<VkFence>            imagesInFlightFences;
-        std::vector<VkBuffer>           m_uniform_buffers;
+        //std::vector<VkBuffer>           m_uniform_buffers;
         VkDebugUtilsMessengerEXT        m_debug_messenger;
         VkDebugReportCallbackEXT        m_report_callback;
         std::vector<VkFramebuffer>      m_framebuffers;
@@ -311,23 +311,15 @@ namespace Diffuse {
             VkImageLayout layout;
         } m_env_texuture;
 
-        struct {
-            VkImageView view;
-            VkImage image;
-            VkDeviceMemory memory;
-        } m_offscreen;
-        std::array<VkImageView, 6> m_cubemap_face_image_views;
+        //struct {
+        //    VkImageView view;
+        //    VkImage image;
+        //    VkDeviceMemory memory;
+        //} m_offscreen;
+        //std::array<VkImageView, 6> m_cubemap_face_image_views;
         VkSampler computeSampler;
 
-        struct {
-            VkBuffer buffer = VK_NULL_HANDLE;
-            VkDeviceMemory memory = VK_NULL_HANDLE;
-            VkDescriptorBufferInfo descriptor;
-        };
-        //} shader_material_buffer;
-
         std::vector<VkFence> m_wait_fences;
-        //std::vector<DescriptorSets> m_descriptor_sets;
         std::vector<VkCommandBuffer> commandBuffers;
         std::vector<VkSemaphore> m_render_complete_semaphores;
         std::vector<VkSemaphore> m_present_complete_semaphores;

@@ -2566,8 +2566,7 @@ namespace Diffuse {
         m_swapchain->Destroy();
     }
 
-    void GraphicsDevice::CleanUp(const Config& config)
-    {
+    void GraphicsDevice::CleanUp(const Config& config) {
         glfwWaitEvents();
         vkDeviceWaitIdle(m_device);
         CleanUpSwapchain();
@@ -2576,7 +2575,8 @@ namespace Diffuse {
             vkFreeMemory(m_device, m_active_scene->GetSkybox()->p_ubo.uniformBuffersMemory[i], nullptr);
         }
         for (int index = 0; index < m_active_scene->GetSceneObjects().size(); index++) {
-            for (size_t i = 0; i < m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffers.size(); i++) {
+            //for (size_t i = 0; i < m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffers.size(); i++) {
+            for (size_t i = 0; i < m_render_ahead; i++) {
                 vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffers[i], nullptr);
                 vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_ubo.uniformBuffersMemory[i], nullptr);
 
@@ -2592,13 +2592,71 @@ namespace Diffuse {
             // delete indices
             vkDestroyBuffer(m_device, m_active_scene->GetSceneObjects()[index]->p_model.m_indices.buffer, nullptr);
             vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.m_indices.memory, nullptr);
+
+            for (int mat = 0; mat < m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials().size(); mat++) {
+                if (m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].baseColorTexture != nullptr) {
+                    vkDestroyImageView(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].baseColorTexture->GetView(), nullptr);
+                    vkDestroyImage(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].baseColorTexture->GetImage(), nullptr);
+                    vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].baseColorTexture->GetMemory(), nullptr);
+                }
+                if (m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].metallicRoughnessTexture != nullptr) {
+                    vkDestroyImageView(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].metallicRoughnessTexture->GetView(), nullptr);
+                    vkDestroyImage(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].metallicRoughnessTexture->GetImage(), nullptr);
+                    vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].metallicRoughnessTexture->GetMemory(), nullptr);
+                }
+                if (m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].normalTexture != nullptr) {
+                    vkDestroyImageView(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].normalTexture->GetView(), nullptr);
+                    vkDestroyImage(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].normalTexture->GetImage(), nullptr);
+                    vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].normalTexture->GetMemory(), nullptr);
+                }
+                if (m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].occlusionTexture != nullptr) {
+                    vkDestroyImageView(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].occlusionTexture->GetView(), nullptr);
+                    vkDestroyImage(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].occlusionTexture->GetImage(), nullptr);
+                    vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].occlusionTexture->GetMemory(), nullptr);
+                }
+                if (m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].emissiveTexture != nullptr) {
+                    vkDestroyImageView(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].emissiveTexture->GetView(), nullptr);
+                    vkDestroyImage(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].emissiveTexture->GetImage(), nullptr);
+                    vkFreeMemory(m_device, m_active_scene->GetSceneObjects()[index]->p_model.GetMaterials()[mat].emissiveTexture->GetMemory(), nullptr);
+                }
+            }
         }
+        vkDestroySampler(m_device, computeSampler, nullptr);
+        // m_env_texuture
+        vkDestroyImageView(m_device, m_env_texuture.view, nullptr);
+        vkDestroyImage(m_device, m_env_texuture.image, nullptr);
+        vkFreeMemory(m_device, m_env_texuture.memory, nullptr);
+        vkDestroySampler(m_device, m_env_texuture.sampler, nullptr);
+        // m_cubemap
+        vkDestroyImageView(m_device, m_cubemap.view, nullptr);
+        vkDestroyImage(m_device, m_cubemap.image, nullptr);
+        vkFreeMemory(m_device, m_cubemap.memory, nullptr);
+        vkDestroySampler(m_device, m_cubemap.sampler, nullptr);
+        // m_brdf_lut
+        vkDestroyImageView(m_device, m_brdf_lut.view, nullptr);
+        vkDestroyImage(m_device, m_brdf_lut.image, nullptr);
+        vkFreeMemory(m_device, m_brdf_lut.memory, nullptr);
+        vkDestroySampler(m_device, m_brdf_lut.sampler, nullptr);
+        // m_Irradiance_cubemap
+        vkDestroyImageView(m_device, m_Irradiance_cubemap.view, nullptr);
+        vkDestroyImage(m_device, m_Irradiance_cubemap.image, nullptr);
+        vkFreeMemory(m_device, m_Irradiance_cubemap.memory, nullptr);
+        vkDestroySampler(m_device, m_Irradiance_cubemap.sampler, nullptr);
+        // m_Prefilter_cubemap
+        vkDestroyImageView(m_device, m_Prefilter_cubemap.view, nullptr);
+        vkDestroyImage(m_device, m_Prefilter_cubemap.image, nullptr);
+        vkFreeMemory(m_device, m_Prefilter_cubemap.memory, nullptr);
+        vkDestroySampler(m_device, m_Prefilter_cubemap.sampler, nullptr);
+        //
+        //vkDestroyImageView(m_device, m_depth_image_view, nullptr);
+        //vkDestroyImage(m_device, m_depth_image, nullptr);
+        //vkFreeMemory(m_device, m_depth_image_memory, nullptr);
         vkDestroyDescriptorPool(m_device, m_descriptor_pools.scene, nullptr);
         // destroy descriptor sets layouts
         vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.model, nullptr);
         vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.skybox, nullptr);
-        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.material, nullptr);
-        vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.node, nullptr);
+        //vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.material, nullptr);
+        //vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.node, nullptr);
         vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.ibl, nullptr);
         vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.materialBuffer, nullptr);
         //
@@ -2611,6 +2669,8 @@ namespace Diffuse {
             vkDestroySemaphore(m_device, m_present_complete_semaphores[i], nullptr);
             vkDestroyFence(m_device, m_wait_fences[i], nullptr);
         }
+        
+        vkFreeCommandBuffers(m_device, m_command_pool, m_command_buffers.size(), m_command_buffers.data());
         vkDestroyCommandPool(m_device, m_command_pool, nullptr);
         vkDestroyDevice(m_device, nullptr);
         if (config.enable_validation_layers)

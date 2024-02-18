@@ -153,9 +153,10 @@ namespace Diffuse {
 
 		return VK_FALSE;
 	}
+	int validation_error = 0;
 	static VKAPI_ATTR VkBool32 VKAPI_CALL ReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
 		size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
-		std::cerr << "validation layer: " << pMessage << std::endl;
+		std::cerr << "validation layer " << validation_error++ << ": " << pMessage << std::endl;
 
 		return VK_FALSE;
 	}
